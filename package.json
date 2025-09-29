@@ -2,7 +2,7 @@
   "name": "chessql-ui",
   "version": "1.0.0",
   "description": "ChessQL Desktop GUI - A lightweight Electron app for browsing chess games",
-  "main": "main.js",
+  "main": "main-fixed.js",
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",

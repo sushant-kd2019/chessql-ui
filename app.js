@@ -7,6 +7,7 @@ class ChessQLApp {
         this.currentGame = null;
         this.currentMoveIndex = 0;
         this.chess = new Chess();
+        this.gameMoves = []; // Store the moves separately
         
         this.initializeElements();
         this.bindEvents();
@@ -36,10 +37,10 @@ class ChessQLApp {
         this.gameOpening = document.getElementById('gameOpening');
         
         // Move controls
-        this.prevMove = document.getElementById('prevMove');
-        this.nextMove = document.getElementById('nextMove');
-        this.firstMove = document.getElementById('firstMove');
-        this.lastMove = document.getElementById('lastMove');
+        this.prevMoveBtn = document.getElementById('prevMove');
+        this.nextMoveBtn = document.getElementById('nextMove');
+        this.firstMoveBtn = document.getElementById('firstMove');
+        this.lastMoveBtn = document.getElementById('lastMove');
     }
 
     bindEvents() {
@@ -68,10 +69,10 @@ class ChessQLApp {
         });
         
         // Move controls
-        this.prevMove.addEventListener('click', () => this.previousMove());
-        this.nextMove.addEventListener('click', () => this.nextMove());
-        this.firstMove.addEventListener('click', () => this.firstMove());
-        this.lastMove.addEventListener('click', () => this.lastMove());
+        this.prevMoveBtn.addEventListener('click', () => this.previousMove());
+        this.nextMoveBtn.addEventListener('click', () => this.nextMove());
+        this.firstMoveBtn.addEventListener('click', () => this.goToFirstMove());
+        this.lastMoveBtn.addEventListener('click', () => this.goToLastMove());
     }
 
     async performSearch() {
@@ -311,12 +312,16 @@ class ChessQLApp {
 
     loadGame(game) {
         try {
+            console.log('Loading game PGN:', game.pgn_text);
             this.chess.loadPgn(game.pgn_text || '');
+            this.gameMoves = [...this.chess.history()]; // Store moves separately
+            console.log('Chess history after PGN load:', this.gameMoves);
+            this.currentMoveIndex = this.gameMoves.length; // Start at the end
             this.updateBoard();
             this.updateMovesList();
             this.updateMoveControls();
         } catch (error) {
-            console.error('Error loading game:', error);
+            console.error('Error loading game from PGN:', error);
             // Fallback: try to load from moves string
             this.loadGameFromMoves(game.moves);
         }
@@ -324,15 +329,29 @@ class ChessQLApp {
 
     loadGameFromMoves(moves) {
         try {
+            console.log('Loading game from moves:', moves);
             this.chess.reset();
-            const moveList = moves.split(' ').filter(move => move && !move.match(/^\d+\./));
+            const moveList = moves.split(' ').filter(move => 
+                move && 
+                !move.match(/^\d+\./) && 
+                !move.match(/^[0-9-]+$/) && 
+                move !== '*'
+            );
+            
+            console.log('Parsed move list:', moveList);
             
             for (const move of moveList) {
-                if (move && !move.match(/^\d+\./)) {
+                try {
                     this.chess.move(move);
+                    console.log('Applied move:', move);
+                } catch (e) {
+                    console.log('Invalid move:', move, e.message);
                 }
             }
             
+            this.gameMoves = [...this.chess.history()]; // Store moves separately
+            console.log('Final chess history:', this.gameMoves);
+            this.currentMoveIndex = this.gameMoves.length; // Start at the end
             this.updateBoard();
             this.updateMovesList();
             this.updateMoveControls();
@@ -362,15 +381,14 @@ class ChessQLApp {
 
     updateMovesList() {
         this.movesList.innerHTML = '';
-        const history = this.chess.history();
         
-        for (let i = 0; i < history.length; i += 2) {
+        for (let i = 0; i < this.gameMoves.length; i += 2) {
             const moveDiv = document.createElement('div');
             moveDiv.className = 'move';
             
             const moveNumber = Math.floor(i / 2) + 1;
-            const whiteMove = history[i];
-            const blackMove = history[i + 1];
+            const whiteMove = this.gameMoves[i];
+            const blackMove = this.gameMoves[i + 1];
             
             moveDiv.innerHTML = `
                 <span class="move-number">${moveNumber}.</span>
@@ -378,28 +396,34 @@ class ChessQLApp {
                 ${blackMove ? `<span class="black-move">${blackMove}</span>` : ''}
             `;
             
-            moveDiv.addEventListener('click', () => this.goToMove(i));
+            moveDiv.addEventListener('click', () => this.goToMove(i + 1));
             this.movesList.appendChild(moveDiv);
         }
     }
 
     updateMoveControls() {
-        const history = this.chess.history();
-        this.currentMoveIndex = Math.min(this.currentMoveIndex, history.length);
+        this.currentMoveIndex = Math.min(this.currentMoveIndex, this.gameMoves.length);
         
-        this.prevMove.disabled = this.currentMoveIndex <= 0;
-        this.nextMove.disabled = this.currentMoveIndex >= history.length;
-        this.firstMove.disabled = this.currentMoveIndex <= 0;
-        this.lastMove.disabled = this.currentMoveIndex >= history.length;
+        this.prevMoveBtn.disabled = this.currentMoveIndex <= 0;
+        this.nextMoveBtn.disabled = this.currentMoveIndex >= this.gameMoves.length;
+        this.firstMoveBtn.disabled = this.currentMoveIndex <= 0;
+        this.lastMoveBtn.disabled = this.currentMoveIndex >= this.gameMoves.length;
     }
 
     goToMove(moveIndex) {
+        console.log('Going to move index:', moveIndex);
         this.currentMoveIndex = moveIndex;
         this.chess.reset();
         
-        const history = this.chess.history();
-        for (let i = 0; i < moveIndex; i++) {
-            this.chess.move(history[i]);
+        console.log('Available moves:', this.gameMoves);
+        
+        for (let i = 0; i < moveIndex && i < this.gameMoves.length; i++) {
+            try {
+                this.chess.move(this.gameMoves[i]);
+                console.log('Applied move in navigation:', this.gameMoves[i]);
+            } catch (e) {
+                console.log('Error applying move in navigation:', this.gameMoves[i], e.message);
+            }
         }
         
         this.updateBoard();
@@ -415,14 +439,13 @@ class ChessQLApp {
     }
 
     nextMove() {
-        const history = this.chess.history();
-        if (this.currentMoveIndex < history.length) {
+        if (this.currentMoveIndex < this.gameMoves.length) {
             this.currentMoveIndex++;
             this.goToMove(this.currentMoveIndex);
         }
     }
 
-    firstMove() {
+    goToFirstMove() {
         this.currentMoveIndex = 0;
         this.chess.reset();
         this.updateBoard();
@@ -430,11 +453,10 @@ class ChessQLApp {
         this.highlightCurrentMove();
     }
 
-    lastMove() {
-        const history = this.chess.history();
-        this.currentMoveIndex = history.length;
+    goToLastMove() {
+        this.currentMoveIndex = this.gameMoves.length;
         this.chess.reset();
-        for (const move of history) {
+        for (const move of this.gameMoves) {
             this.chess.move(move);
         }
         this.updateBoard();
@@ -450,8 +472,9 @@ class ChessQLApp {
         
         // Highlight current move
         const moves = this.movesList.querySelectorAll('.move');
-        if (moves[this.currentMoveIndex]) {
-            moves[this.currentMoveIndex].classList.add('current');
+        const moveIndex = Math.floor((this.currentMoveIndex - 1) / 2);
+        if (moves[moveIndex]) {
+            moves[moveIndex].classList.add('current');
         }
     }
 
