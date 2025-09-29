@@ -32,6 +32,7 @@ class ChessQLApp {
         this.blackPlayerElo = document.getElementById('blackPlayerElo');
         this.gameResult = document.getElementById('gameResult');
         this.gameDate = document.getElementById('gameDate');
+        this.gameSite = document.getElementById('gameSite');
         this.gameOpening = document.getElementById('gameOpening');
         
         // Move controls
@@ -290,6 +291,15 @@ class ChessQLApp {
         this.blackPlayerElo.textContent = game.black_elo ? `(${game.black_elo})` : '';
         this.gameResult.textContent = game.result || 'Unknown';
         this.gameDate.textContent = game.date_played || 'Unknown';
+        
+        // Handle site field - make it clickable if it's a URL
+        const site = game.site || 'Unknown';
+        if (site !== 'Unknown' && (site.startsWith('http://') || site.startsWith('https://'))) {
+            this.gameSite.innerHTML = `<a href="${site}" target="_blank" rel="noopener noreferrer">${site}</a>`;
+        } else {
+            this.gameSite.textContent = site;
+        }
+        
         this.gameOpening.textContent = game.opening || 'Unknown';
         
         // Load the game
