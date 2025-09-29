@@ -205,7 +205,10 @@ class ChessQLApp {
                 
                 const piece = finalPosition[row][col];
                 if (piece) {
-                    square.textContent = this.getPieceSymbol(piece);
+                    const pieceElement = document.createElement('span');
+                    pieceElement.textContent = this.getPieceSymbol(piece);
+                    pieceElement.className = piece === piece.toUpperCase() ? 'white-piece' : 'black-piece';
+                    square.appendChild(pieceElement);
                 }
                 
                 board.appendChild(square);
@@ -271,6 +274,7 @@ class ChessQLApp {
     }
 
     getPieceSymbol(piece) {
+        // Use more distinctive piece symbols
         const symbols = {
             'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
             'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟',
@@ -371,7 +375,10 @@ class ChessQLApp {
                 const piece = this.chess.get(`${String.fromCharCode(97 + col)}${8 - row}`);
                 if (piece) {
                     const pieceSymbol = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
-                    square.textContent = this.getPieceSymbol(pieceSymbol);
+                    const pieceElement = document.createElement('span');
+                    pieceElement.textContent = this.getPieceSymbol(pieceSymbol);
+                    pieceElement.className = piece.color === 'w' ? 'white-piece' : 'black-piece';
+                    square.appendChild(pieceElement);
                 }
                 
                 this.chessBoard.appendChild(square);
