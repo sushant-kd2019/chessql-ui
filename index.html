@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChessQL Desktop</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header with search -->
+        <header class="header">
+            <div class="search-container">
+                <input type="text" id="queryInput" placeholder="Search chess games... (e.g., 'lecorvus won', 'queen sacrificed')" />
+                <button id="searchBtn">Search</button>
+                <button id="clearBtn">Clear</button>
+            </div>
+            <div class="search-type">
+                <label>
+                    <input type="radio" name="searchType" value="natural" checked>
+                    Natural Language
+                </label>
+                <label>
+                    <input type="radio" name="searchType" value="cql">
+                    ChessQL
+                </label>
+            </div>
+        </header>
+
+        <!-- Loading indicator -->
+        <div id="loadingIndicator" class="loading hidden">
+            <div class="spinner"></div>
+            <span>Searching games...</span>
+        </div>
+
+        <!-- Error message -->
+        <div id="errorMessage" class="error hidden"></div>
+
+        <!-- Results container -->
+        <main class="main-content">
+            <div id="resultsContainer" class="results-container">
+                <div class="welcome-message">
+                    <h2>Welcome to ChessQL Desktop</h2>
+                    <p>Search for chess games using natural language or ChessQL queries.</p>
+                    <div class="example-queries">
+                        <h3>Try these examples:</h3>
+                        <div class="example-query" data-query="lecorvus won">lecorvus won</div>
+                        <div class="example-query" data-query="queen sacrificed">queen sacrificed</div>
+                        <div class="example-query" data-query="pawn promoted to queen">pawn promoted to queen</div>
+                        <div class="example-query" data-query="SELECT * FROM games WHERE white_player = 'lecorvus'">SQL: lecorvus as white</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Game viewer modal -->
+        <div id="gameModal" class="modal hidden">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 id="gameTitle">Game Viewer</h2>
+                    <button id="closeModal" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="game-info">
+                        <div class="players">
+                            <div class="white-player">
+                                <span class="player-label">White:</span>
+                                <span id="whitePlayerName">-</span>
+                                <span id="whitePlayerElo" class="elo">-</span>
+                            </div>
+                            <div class="black-player">
+                                <span class="player-label">Black:</span>
+                                <span id="blackPlayerName">-</span>
+                                <span id="blackPlayerElo" class="elo">-</span>
+                            </div>
+                        </div>
+                        <div class="game-meta">
+                            <div class="result">
+                                <span class="label">Result:</span>
+                                <span id="gameResult">-</span>
+                            </div>
+                            <div class="date">
+                                <span class="label">Date:</span>
+                                <span id="gameDate">-</span>
+                            </div>
+                            <div class="opening">
+                                <span class="label">Opening:</span>
+                                <span id="gameOpening">-</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="game-viewer">
+                        <div class="board-container">
+                            <div id="chessBoard" class="chess-board"></div>
+                        </div>
+                        <div class="moves-container">
+                            <div class="moves-header">
+                                <h3>Moves</h3>
+                                <div class="move-controls">
+                                    <button id="prevMove" disabled>← Previous</button>
+                                    <button id="nextMove" disabled>Next →</button>
+                                    <button id="firstMove" disabled>⏮ First</button>
+                                    <button id="lastMove" disabled>Last ⏭</button>
+                                </div>
+                            </div>
+                            <div id="movesList" class="moves-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="chess.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
