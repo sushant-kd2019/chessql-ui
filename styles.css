@@ -378,6 +378,26 @@ body {
     font-size: 0.9em;
 }
 
+#gameSite {
+    color: #667eea;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+#gameSite:hover {
+    text-decoration: underline;
+}
+
+#gameSite a {
+    color: #667eea;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+#gameSite a:hover {
+    text-decoration: underline;
+}
+
 /* Game viewer */
 .game-viewer {
     display: grid;
