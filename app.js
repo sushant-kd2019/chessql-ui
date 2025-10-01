@@ -35,6 +35,7 @@ class ChessQLApp {
         this.gameDate = document.getElementById('gameDate');
         this.gameSite = document.getElementById('gameSite');
         this.gameOpening = document.getElementById('gameOpening');
+        this.gameTermination = document.getElementById('gameTermination');
         
         // Move controls
         this.prevMoveBtn = document.getElementById('prevMove');
@@ -309,6 +310,7 @@ class ChessQLApp {
         }
         
         this.gameOpening.textContent = game.opening || 'Unknown';
+        this.gameTermination.textContent = game.termination || 'Unknown';
         
         // Load the game
         this.loadGame(game);
