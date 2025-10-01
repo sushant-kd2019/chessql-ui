@@ -390,15 +390,7 @@ class ChessQLApp {
     updateBoardAfterMove(moveObj) {
         console.log('Updating board after move:', moveObj);
         
-        // Update the source square (remove piece)
-        const fromSquare = document.querySelector(`[data-square="${moveObj.from}"]`);
-        console.log('From square found:', !!fromSquare, moveObj.from);
-        if (fromSquare) {
-            fromSquare.innerHTML = '';
-            console.log('Cleared from square');
-        }
-        
-        // Update the destination square (add piece)
+        // Only update the destination square (source piece already removed during animation)
         const toSquare = document.querySelector(`[data-square="${moveObj.to}"]`);
         console.log('To square found:', !!toSquare, moveObj.to);
         if (toSquare) {
@@ -636,8 +628,8 @@ class ChessQLApp {
             
             this.chessBoard.appendChild(animatedPiece);
             
-            // Hide the source piece immediately when animation starts
-            pieceElement.style.opacity = '0';
+            // Remove the source piece immediately when animation starts
+            pieceElement.remove();
             
             // If there's a capture, hide the captured piece
             const capturedPiece = toSquare.querySelector('.piece');
