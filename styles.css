@@ -243,6 +243,34 @@ body {
     min-width: 38px;
     line-height: 1;
     text-shadow: 1px 1px 3px rgba(0,0,0,0.4);
+    position: relative;
+    overflow: hidden;
+}
+
+.square .piece {
+    transition: all 0.5s ease-in-out;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.square .piece.moving {
+    z-index: 10;
+    transform: scale(1.1);
+    filter: drop-shadow(0 0 8px rgba(0,0,0,0.6));
+}
+
+.square .piece.landing {
+    animation: land 0.3s ease-out;
+}
+
+@keyframes land {
+    0% { transform: scale(1.2); }
+    50% { transform: scale(0.95); }
+    100% { transform: scale(1); }
 }
 
 .square.light {
