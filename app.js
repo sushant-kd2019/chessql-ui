@@ -9,6 +9,16 @@ class ChessQLApp {
         this.chess = new Chess();
         this.gameMoves = []; // Store the moves separately
         
+        // Pagination
+        this.currentPage = 1;
+        this.gamesPerPage = 20;
+        this.hasMoreGames = false;
+        this.isLoadingMore = false;
+        this.currentQuery = '';
+        this.currentSearchType = 'natural';
+        this.totalCount = 0;
+        this.totalPages = 0;
+        
         this.initializeElements();
         this.bindEvents();
     }
@@ -77,6 +87,18 @@ class ChessQLApp {
         
         // Keyboard navigation
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        
+        // Event delegation for pagination buttons
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.dataset.action === 'load-more') {
+                e.preventDefault();
+                this.loadMoreGames();
+            } else if (e.target && e.target.dataset.action === 'go-to-page') {
+                e.preventDefault();
+                const page = parseInt(e.target.dataset.page);
+                this.goToPage(page);
+            }
+        });
     }
 
     async performSearch() {
@@ -89,29 +111,117 @@ class ChessQLApp {
         this.hideError();
 
         try {
-            const endpoint = searchType === 'natural' ? '/ask' : '/cql';
-            const data = searchType === 'natural' 
-                ? { question: query, limit: 50 }
-                : { query: query, limit: 50 };
+            // Reset pagination for new search
+            this.currentPage = 1;
+            this.currentQuery = query;
+            this.currentSearchType = searchType;
+            this.currentGames = [];
+            this.hasMoreGames = false;
 
-            const response = await ipcRenderer.invoke('api-request', {
-                endpoint: endpoint,
-                method: 'POST',
-                data: data
-            });
-
-            if (response.success) {
-                this.currentGames = response.data.results || [];
-                this.displayGames();
-            } else {
-                this.showError(response.error || 'Search failed');
-            }
+            const games = await this.searchGames(query, searchType, this.currentPage);
+            this.currentGames = games;
+            // hasMoreGames is now set in searchGames() based on API response
+            this.displayGames();
         } catch (error) {
-            this.showError('Failed to connect to ChessQL server. Make sure it\'s running.');
+            this.showError('Search failed: ' + error.message);
         } finally {
             this.showLoading(false);
         }
     }
+
+    async searchGames(query, searchType, page = 1) {
+        const endpoint = searchType === 'natural' ? '/ask' : '/cql';
+        const offset = (page - 1) * this.gamesPerPage;
+        const data = searchType === 'natural' 
+            ? { question: query, limit: this.gamesPerPage, page_no: page, offset: offset }
+            : { query: query, limit: this.gamesPerPage, page_no: page, offset: offset };
+
+        const response = await ipcRenderer.invoke('api-request', {
+            endpoint: endpoint,
+            method: 'POST',
+            data: data
+        });
+
+        if (response.success) {
+            console.log('API Response:', response.data);
+            console.log('Results count:', response.data.results?.length);
+            console.log('Total count:', response.data.total_count);
+            console.log('Has next:', response.data.has_next);
+            
+            // Store pagination info for this search
+            this.hasMoreGames = response.data.has_next || false;
+            this.totalCount = response.data.total_count || 0;
+            this.totalPages = Math.ceil(this.totalCount / this.gamesPerPage);
+            console.log('Set hasMoreGames to:', this.hasMoreGames);
+            console.log('Set totalCount to:', this.totalCount);
+            console.log('Set totalPages to:', this.totalPages);
+            
+            return response.data.results || [];
+        } else {
+            throw new Error(response.error || 'Search failed');
+        }
+    }
+
+    async goToPage(page) {
+        console.log('goToPage called - page:', page, 'currentPage:', this.currentPage);
+        
+        if (page < 1 || page > this.totalPages || page === this.currentPage) {
+            console.log('Invalid page or same page - ignoring');
+            return;
+        }
+
+        this.showLoading(true);
+        this.currentPage = page;
+
+        try {
+            const games = await this.searchGames(this.currentQuery, this.currentSearchType, this.currentPage);
+            console.log('Page loaded successfully');
+            this.currentGames = games; // Replace instead of append
+            this.displayGames();
+        } catch (error) {
+            console.error('Failed to load page:', error);
+            this.showError('Failed to load page: ' + error.message);
+        } finally {
+            this.showLoading(false);
+        }
+    }
+
+    async loadMoreGames() {
+        console.log('loadMoreGames called - isLoadingMore:', this.isLoadingMore, 'hasMoreGames:', this.hasMoreGames);
+        
+        if (this.isLoadingMore || !this.hasMoreGames) {
+            console.log('loadMoreGames blocked - isLoadingMore:', this.isLoadingMore, 'hasMoreGames:', this.hasMoreGames);
+            return;
+        }
+
+        console.log('Starting to load more games - page:', this.currentPage + 1);
+        this.isLoadingMore = true;
+        this.currentPage++;
+
+        // Add timeout to prevent stuck loading state
+        const loadingTimeout = setTimeout(() => {
+            console.log('Loading timeout - forcing isLoadingMore to false');
+            this.isLoadingMore = false;
+            this.displayGames();
+        }, 10000); // 10 second timeout
+
+        try {
+            const newGames = await this.searchGames(this.currentQuery, this.currentSearchType, this.currentPage);
+            console.log('Loaded new games:', newGames.length);
+            this.currentGames = [...this.currentGames, ...newGames];
+            console.log('Total games now:', this.currentGames.length);
+            // hasMoreGames is updated in searchGames() based on API response
+            this.displayGames();
+        } catch (error) {
+            console.error('Failed to load more games:', error);
+            this.currentPage--; // Revert page increment on error
+        } finally {
+            clearTimeout(loadingTimeout);
+            console.log('Setting isLoadingMore to false');
+            this.isLoadingMore = false;
+        }
+    }
+
 
     clearSearch() {
         this.queryInput.value = '';
@@ -153,8 +263,67 @@ class ChessQLApp {
             gamesGrid.appendChild(gameCard);
         });
 
+        // No loading indicator needed here - main loading indicator handles it
+
         this.resultsContainer.innerHTML = '';
         this.resultsContainer.appendChild(gamesGrid);
+        
+        // Add pagination controls
+        if (this.totalPages > 1) {
+            this.addPaginationControls();
+        }
+    }
+
+    addPaginationControls() {
+        const paginationDiv = document.createElement('div');
+        paginationDiv.className = 'pagination-container';
+        
+        const startPage = Math.max(1, this.currentPage - 2);
+        const endPage = Math.min(this.totalPages, this.currentPage + 2);
+        
+        let paginationHTML = '<div class="pagination">';
+        
+        // Previous button
+        if (this.currentPage > 1) {
+            paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="${this.currentPage - 1}">← Previous</button>`;
+        }
+        
+        // First page
+        if (startPage > 1) {
+            paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="1">1</button>`;
+            if (startPage > 2) {
+                paginationHTML += '<span class="pagination-ellipsis">...</span>';
+            }
+        }
+        
+        // Page numbers
+        for (let i = startPage; i <= endPage; i++) {
+            const isActive = i === this.currentPage ? 'active' : '';
+            paginationHTML += `<button class="pagination-btn ${isActive}" data-action="go-to-page" data-page="${i}">${i}</button>`;
+        }
+        
+        // Last page
+        if (endPage < this.totalPages) {
+            if (endPage < this.totalPages - 1) {
+                paginationHTML += '<span class="pagination-ellipsis">...</span>';
+            }
+            paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="${this.totalPages}">${this.totalPages}</button>`;
+        }
+        
+        // Next button
+        if (this.currentPage < this.totalPages) {
+            paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="${this.currentPage + 1}">Next →</button>`;
+        }
+        
+        paginationHTML += '</div>';
+        
+        // Page info
+        const startItem = (this.currentPage - 1) * this.gamesPerPage + 1;
+        const endItem = Math.min(this.currentPage * this.gamesPerPage, this.totalCount);
+        paginationHTML += `<div class="pagination-info">Showing ${startItem}-${endItem} of ${this.totalCount} games</div>`;
+        
+        paginationDiv.innerHTML = paginationHTML;
+        this.resultsContainer.appendChild(paginationDiv);
     }
 
     createGameCard(game, index) {

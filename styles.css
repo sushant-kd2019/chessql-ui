@@ -561,3 +561,115 @@ body {
         justify-content: center;
     }
 }
+
+/* Loading more indicator */
+.loading-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 20px;
+    color: #666;
+    font-size: 14px;
+    grid-column: 1 / -1;
+}
+
+.loading-more .spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Load More button */
+.load-more-container {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    grid-column: 1 / -1;
+}
+
+.load-more-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.load-more-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.load-more-btn:active {
+    transform: translateY(0);
+}
+
+/* Pagination */
+.pagination-container {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    gap: 10px;
+}
+
+.pagination {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.pagination-btn {
+    background: #f8f9fa;
+    color: #333;
+    border: 1px solid #dee2e6;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    min-width: 40px;
+    text-align: center;
+}
+
+.pagination-btn:hover {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.pagination-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+.pagination-btn:disabled {
+    background: #f8f9fa;
+    color: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.pagination-ellipsis {
+    padding: 8px 4px;
+    color: #6c757d;
+    font-weight: bold;
+}
+
+.pagination-info {
+    color: #6c757d;
+    font-size: 14px;
+    text-align: center;
+}
