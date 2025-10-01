@@ -371,17 +371,54 @@ class ChessQLApp {
             for (let col = 0; col < 8; col++) {
                 const square = document.createElement('div');
                 square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                square.dataset.square = `${String.fromCharCode(97 + col)}${8 - row}`;
                 
                 const piece = this.chess.get(`${String.fromCharCode(97 + col)}${8 - row}`);
                 if (piece) {
                     const pieceSymbol = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
                     const pieceElement = document.createElement('span');
                     pieceElement.textContent = this.getPieceSymbol(pieceSymbol);
-                    pieceElement.className = piece.color === 'w' ? 'white-piece' : 'black-piece';
+                    pieceElement.className = `piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`;
                     square.appendChild(pieceElement);
                 }
                 
                 this.chessBoard.appendChild(square);
+            }
+        }
+    }
+
+    updateBoardAfterMove(moveObj) {
+        console.log('Updating board after move:', moveObj);
+        
+        // Update the source square (remove piece)
+        const fromSquare = document.querySelector(`[data-square="${moveObj.from}"]`);
+        console.log('From square found:', !!fromSquare, moveObj.from);
+        if (fromSquare) {
+            fromSquare.innerHTML = '';
+            console.log('Cleared from square');
+        }
+        
+        // Update the destination square (add piece)
+        const toSquare = document.querySelector(`[data-square="${moveObj.to}"]`);
+        console.log('To square found:', !!toSquare, moveObj.to);
+        if (toSquare) {
+            toSquare.innerHTML = '';
+            
+            const piece = this.chess.get(moveObj.to);
+            console.log('Piece at destination:', piece);
+            if (piece) {
+                const pieceSymbol = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
+                const pieceElement = document.createElement('span');
+                pieceElement.textContent = this.getPieceSymbol(pieceSymbol);
+                pieceElement.className = `piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`;
+                pieceElement.classList.add('landing');
+                toSquare.appendChild(pieceElement);
+                console.log('Added piece to destination square');
+                
+                // Remove landing animation after it completes
+                setTimeout(() => {
+                    pieceElement.classList.remove('landing');
+                }, 300);
             }
         }
     }
@@ -403,7 +440,7 @@ class ChessQLApp {
                 ${blackMove ? `<span class="black-move">${blackMove}</span>` : ''}
             `;
             
-            moveDiv.addEventListener('click', () => this.goToMove(i + 1));
+            moveDiv.addEventListener('click', () => this.goToMoveDirect(i + 1));
             this.movesList.appendChild(moveDiv);
         }
     }
@@ -418,37 +455,222 @@ class ChessQLApp {
     }
 
     goToMove(moveIndex) {
-        console.log('Going to move index:', moveIndex);
-        this.currentMoveIndex = moveIndex;
+        console.log('Going to move index:', moveIndex, 'from current:', this.currentMoveIndex);
+        
+        // If going to start, reset and show starting position
+        if (moveIndex === 0) {
+            this.chess.reset();
+            this.updateBoard();
+            this.currentMoveIndex = moveIndex;
+            this.updateMoveControls();
+            this.highlightCurrentMove();
+            return;
+        }
+        
+        // If moving forward from current position, animate only the next move
+        if (moveIndex > this.currentMoveIndex) {
+            console.log('Moving forward - using animateNextMove');
+            this.animateNextMove(moveIndex);
+        } else {
+            // If going backward, reset and animate to target
+            console.log('Moving backward - using animateMovesToPosition');
+            this.chess.reset();
+            this.updateBoard();
+            this.animateMovesToPosition(moveIndex);
+        }
+    }
+
+    goToMoveDirect(moveIndex) {
+        console.log('Going directly to move index:', moveIndex);
+        
+        // Reset chess to starting position
         this.chess.reset();
         
-        console.log('Available moves:', this.gameMoves);
-        
+        // Apply all moves up to the target index
         for (let i = 0; i < moveIndex && i < this.gameMoves.length; i++) {
             try {
                 this.chess.move(this.gameMoves[i]);
-                console.log('Applied move in navigation:', this.gameMoves[i]);
             } catch (e) {
-                console.log('Error applying move in navigation:', this.gameMoves[i], e.message);
+                console.log('Error applying move:', this.gameMoves[i], e.message);
             }
         }
         
+        // Update the board and controls
+        this.currentMoveIndex = moveIndex;
         this.updateBoard();
         this.updateMoveControls();
         this.highlightCurrentMove();
     }
 
+    async animateNextMove(targetMoveIndex) {
+        console.log('Animating next move from', this.currentMoveIndex, 'to', targetMoveIndex);
+        
+        // Animate only the moves from current position to target
+        for (let i = this.currentMoveIndex; i < targetMoveIndex && i < this.gameMoves.length; i++) {
+            try {
+                const move = this.gameMoves[i];
+                console.log('Processing move', i, ':', move);
+                
+                // Get the move object before applying it
+                const tempChess = new Chess(this.chess.fen());
+                const moveObj = tempChess.move(move);
+                
+                if (moveObj) {
+                    console.log('Move object:', moveObj);
+                    
+                    // Animate the move
+                    await this.animateMove(moveObj);
+                    
+                    // Apply the move to the actual chess instance
+                    this.chess.move(move);
+                    console.log('Applied move to chess instance');
+                    
+                    // Update only the affected squares instead of recreating the board
+                    this.updateBoardAfterMove(moveObj);
+                    console.log('Updated board after move');
+                }
+                
+                console.log('Completed move in navigation:', move);
+            } catch (e) {
+                console.log('Error applying move in navigation:', this.gameMoves[i], e.message);
+            }
+        }
+        
+        this.currentMoveIndex = targetMoveIndex;
+        this.updateMoveControls();
+        this.highlightCurrentMove();
+    }
+
+    async animateMovesToPosition(targetMoveIndex) {
+        console.log('Animating moves from 0 to', targetMoveIndex);
+        
+        // Start from the beginning and animate to target
+        for (let i = 0; i < targetMoveIndex && i < this.gameMoves.length; i++) {
+            try {
+                const move = this.gameMoves[i];
+                console.log('Processing move', i, ':', move);
+                
+                // Get the move object before applying it
+                const tempChess = new Chess(this.chess.fen());
+                const moveObj = tempChess.move(move);
+                
+                if (moveObj) {
+                    console.log('Move object:', moveObj);
+                    
+                    // Animate the move
+                    await this.animateMove(moveObj);
+                    
+                    // Apply the move to the actual chess instance
+                    this.chess.move(move);
+                    console.log('Applied move to chess instance');
+                    
+                    // Update only the affected squares instead of recreating the board
+                    this.updateBoardAfterMove(moveObj);
+                    console.log('Updated board after move');
+                }
+                
+                console.log('Completed move in navigation:', move);
+            } catch (e) {
+                console.log('Error applying move in navigation:', this.gameMoves[i], e.message);
+            }
+        }
+        
+        this.currentMoveIndex = targetMoveIndex;
+        this.updateMoveControls();
+        this.highlightCurrentMove();
+    }
+
+    async animateMove(moveObj) {
+        return new Promise((resolve) => {
+            const fromSquare = document.querySelector(`[data-square="${moveObj.from}"]`);
+            const toSquare = document.querySelector(`[data-square="${moveObj.to}"]`);
+            
+            if (!fromSquare || !toSquare) {
+                resolve();
+                return;
+            }
+            
+            // Get the piece element from the source square
+            const pieceElement = fromSquare.querySelector('.piece');
+            if (!pieceElement) {
+                resolve();
+                return;
+            }
+            
+            // Clone the piece for animation
+            const animatedPiece = pieceElement.cloneNode(true);
+            animatedPiece.classList.add('moving');
+            
+            // Position the animated piece at the source
+            const fromRect = fromSquare.getBoundingClientRect();
+            const toRect = toSquare.getBoundingClientRect();
+            const boardRect = this.chessBoard.getBoundingClientRect();
+            
+            // Calculate positions relative to the board
+            const fromX = fromRect.left - boardRect.left;
+            const fromY = fromRect.top - boardRect.top;
+            const toX = toRect.left - boardRect.left;
+            const toY = toRect.top - boardRect.top;
+            
+            // Use the destination square size for consistent appearance
+            const squareSize = Math.min(toRect.width, toRect.height);
+            
+            animatedPiece.style.position = 'absolute';
+            animatedPiece.style.left = fromX + 'px';
+            animatedPiece.style.top = fromY + 'px';
+            animatedPiece.style.pointerEvents = 'none';
+            animatedPiece.style.zIndex = '1000';
+            animatedPiece.style.width = squareSize + 'px';
+            animatedPiece.style.height = squareSize + 'px';
+            animatedPiece.style.margin = '0';
+            animatedPiece.style.padding = '0';
+            animatedPiece.style.fontSize = (squareSize * 0.8) + 'px'; // Scale font size to square
+            animatedPiece.style.display = 'flex';
+            animatedPiece.style.alignItems = 'center';
+            animatedPiece.style.justifyContent = 'center';
+            
+            // Make sure the board has relative positioning for absolute children
+            if (getComputedStyle(this.chessBoard).position === 'static') {
+                this.chessBoard.style.position = 'relative';
+            }
+            
+            this.chessBoard.appendChild(animatedPiece);
+            
+            // Hide the source piece immediately when animation starts
+            pieceElement.style.opacity = '0';
+            
+            // If there's a capture, hide the captured piece
+            const capturedPiece = toSquare.querySelector('.piece');
+            if (capturedPiece) {
+                capturedPiece.style.opacity = '0';
+            }
+            
+            // Small delay to ensure the piece is rendered before animation
+            requestAnimationFrame(() => {
+                // Animate only position, not size - reduced timing
+                animatedPiece.style.transition = 'left 0.3s ease-in-out, top 0.3s ease-in-out';
+                animatedPiece.style.left = toX + 'px';
+                animatedPiece.style.top = toY + 'px';
+            });
+            
+            // After animation completes
+            setTimeout(() => {
+                // Remove animated piece
+                animatedPiece.remove();
+                resolve();
+            }, 300);
+        });
+    }
+
     previousMove() {
         if (this.currentMoveIndex > 0) {
-            this.currentMoveIndex--;
-            this.goToMove(this.currentMoveIndex);
+            this.goToMove(this.currentMoveIndex - 1);
         }
     }
 
     nextMove() {
         if (this.currentMoveIndex < this.gameMoves.length) {
-            this.currentMoveIndex++;
-            this.goToMove(this.currentMoveIndex);
+            this.goToMove(this.currentMoveIndex + 1);
         }
     }
 
@@ -463,12 +685,8 @@ class ChessQLApp {
     goToLastMove() {
         this.currentMoveIndex = this.gameMoves.length;
         this.chess.reset();
-        for (const move of this.gameMoves) {
-            this.chess.move(move);
-        }
         this.updateBoard();
-        this.updateMoveControls();
-        this.highlightCurrentMove();
+        this.animateMovesToPosition(this.gameMoves.length);
     }
 
     highlightCurrentMove() {
