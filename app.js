@@ -11,13 +11,16 @@ class ChessQLApp {
         
         // Pagination
         this.currentPage = 1;
-        this.gamesPerPage = 20;
+        this.gamesPerPage = 20; // Frontend page size
+        this.backendPageSize = 500; // Backend page size
         this.hasMoreGames = false;
         this.isLoadingMore = false;
         this.currentQuery = '';
         this.currentSearchType = 'natural';
         this.totalCount = 0;
         this.totalPages = 0;
+        this.allGames = []; // Store all loaded games
+        this.currentBackendPage = 1; // Track which backend page we're on
         
         this.initializeElements();
         this.bindEvents();
@@ -90,10 +93,7 @@ class ChessQLApp {
         
         // Event delegation for pagination buttons
         document.addEventListener('click', (e) => {
-            if (e.target && e.target.dataset.action === 'load-more') {
-                e.preventDefault();
-                this.loadMoreGames();
-            } else if (e.target && e.target.dataset.action === 'go-to-page') {
+            if (e.target && e.target.dataset.action === 'go-to-page') {
                 e.preventDefault();
                 const page = parseInt(e.target.dataset.page);
                 this.goToPage(page);
@@ -113,14 +113,18 @@ class ChessQLApp {
         try {
             // Reset pagination for new search
             this.currentPage = 1;
+            this.currentBackendPage = 1;
             this.currentQuery = query;
             this.currentSearchType = searchType;
+            this.allGames = [];
             this.currentGames = [];
             this.hasMoreGames = false;
 
-            const games = await this.searchGames(query, searchType, this.currentPage);
-            this.currentGames = games;
-            // hasMoreGames is now set in searchGames() based on API response
+            // Load first backend page (500 games)
+            const games = await this.searchGames(query, searchType, this.currentBackendPage);
+            this.allGames = games; // Store all loaded games
+            this.currentGames = this.getCurrentPageGames(); // Get first 20 games
+            this.totalPages = Math.ceil(this.totalCount / this.gamesPerPage);
             this.displayGames();
         } catch (error) {
             this.showError('Search failed: ' + error.message);
@@ -129,12 +133,18 @@ class ChessQLApp {
         }
     }
 
+    getCurrentPageGames() {
+        const startIndex = (this.currentPage - 1) * this.gamesPerPage;
+        const endIndex = startIndex + this.gamesPerPage;
+        return this.allGames.slice(startIndex, endIndex);
+    }
+
     async searchGames(query, searchType, page = 1) {
         const endpoint = searchType === 'natural' ? '/ask' : '/cql';
-        const offset = (page - 1) * this.gamesPerPage;
+        const offset = (page - 1) * this.backendPageSize;
         const data = searchType === 'natural' 
-            ? { question: query, limit: this.gamesPerPage, page_no: page, offset: offset }
-            : { query: query, limit: this.gamesPerPage, page_no: page, offset: offset };
+            ? { question: query, limit: this.backendPageSize, page_no: page, offset: offset }
+            : { query: query, limit: this.backendPageSize, page_no: page, offset: offset };
 
         const response = await ipcRenderer.invoke('api-request', {
             endpoint: endpoint,
@@ -170,57 +180,33 @@ class ChessQLApp {
             return;
         }
 
-        this.showLoading(true);
         this.currentPage = page;
-
-        try {
-            const games = await this.searchGames(this.currentQuery, this.currentSearchType, this.currentPage);
-            console.log('Page loaded successfully');
-            this.currentGames = games; // Replace instead of append
-            this.displayGames();
-        } catch (error) {
-            console.error('Failed to load page:', error);
-            this.showError('Failed to load page: ' + error.message);
-        } finally {
-            this.showLoading(false);
-        }
-    }
-
-    async loadMoreGames() {
-        console.log('loadMoreGames called - isLoadingMore:', this.isLoadingMore, 'hasMoreGames:', this.hasMoreGames);
         
-        if (this.isLoadingMore || !this.hasMoreGames) {
-            console.log('loadMoreGames blocked - isLoadingMore:', this.isLoadingMore, 'hasMoreGames:', this.hasMoreGames);
-            return;
+        // Check if we need to load more backend data
+        const requiredBackendPage = Math.ceil((page * this.gamesPerPage) / this.backendPageSize);
+        
+        if (requiredBackendPage > this.currentBackendPage) {
+            console.log('Need to load backend page:', requiredBackendPage);
+            this.showLoading(true);
+            
+            try {
+                const newGames = await this.searchGames(this.currentQuery, this.currentSearchType, requiredBackendPage);
+                this.allGames = [...this.allGames, ...newGames]; // Append new games
+                this.currentBackendPage = requiredBackendPage;
+            } catch (error) {
+                console.error('Failed to load backend page:', error);
+                this.showError('Failed to load more games: ' + error.message);
+                return;
+            } finally {
+                this.showLoading(false);
+            }
         }
-
-        console.log('Starting to load more games - page:', this.currentPage + 1);
-        this.isLoadingMore = true;
-        this.currentPage++;
-
-        // Add timeout to prevent stuck loading state
-        const loadingTimeout = setTimeout(() => {
-            console.log('Loading timeout - forcing isLoadingMore to false');
-            this.isLoadingMore = false;
-            this.displayGames();
-        }, 10000); // 10 second timeout
-
-        try {
-            const newGames = await this.searchGames(this.currentQuery, this.currentSearchType, this.currentPage);
-            console.log('Loaded new games:', newGames.length);
-            this.currentGames = [...this.currentGames, ...newGames];
-            console.log('Total games now:', this.currentGames.length);
-            // hasMoreGames is updated in searchGames() based on API response
-            this.displayGames();
-        } catch (error) {
-            console.error('Failed to load more games:', error);
-            this.currentPage--; // Revert page increment on error
-        } finally {
-            clearTimeout(loadingTimeout);
-            console.log('Setting isLoadingMore to false');
-            this.isLoadingMore = false;
-        }
+        
+        // Get current page games from loaded data
+        this.currentGames = this.getCurrentPageGames();
+        this.displayGames();
     }
+
 
 
     clearSearch() {
@@ -278,17 +264,33 @@ class ChessQLApp {
         const paginationDiv = document.createElement('div');
         paginationDiv.className = 'pagination-container';
         
-        const startPage = Math.max(1, this.currentPage - 2);
-        const endPage = Math.min(this.totalPages, this.currentPage + 2);
+        // Show fewer page numbers for better mobile experience
+        const maxVisiblePages = window.innerWidth < 768 ? 3 : 5;
+        const halfVisible = Math.floor(maxVisiblePages / 2);
+        
+        let startPage = Math.max(1, this.currentPage - halfVisible);
+        let endPage = Math.min(this.totalPages, this.currentPage + halfVisible);
+        
+        // Adjust if we're near the beginning or end
+        if (endPage - startPage + 1 < maxVisiblePages) {
+            if (startPage === 1) {
+                endPage = Math.min(this.totalPages, startPage + maxVisiblePages - 1);
+            } else {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+        }
         
         let paginationHTML = '<div class="pagination">';
         
-        // Previous button
+        // Previous button (fixed left position)
         if (this.currentPage > 1) {
-            paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="${this.currentPage - 1}">← Previous</button>`;
+            paginationHTML += `<button class="pagination-btn prev-btn" data-action="go-to-page" data-page="${this.currentPage - 1}">←</button>`;
         }
         
-        // First page
+        // Center section with page numbers
+        paginationHTML += '<div class="pagination-center">';
+        
+        // First page (only if not in visible range)
         if (startPage > 1) {
             paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="1">1</button>`;
             if (startPage > 2) {
@@ -302,7 +304,7 @@ class ChessQLApp {
             paginationHTML += `<button class="pagination-btn ${isActive}" data-action="go-to-page" data-page="${i}">${i}</button>`;
         }
         
-        // Last page
+        // Last page (only if not in visible range)
         if (endPage < this.totalPages) {
             if (endPage < this.totalPages - 1) {
                 paginationHTML += '<span class="pagination-ellipsis">...</span>';
@@ -310,17 +312,20 @@ class ChessQLApp {
             paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="${this.totalPages}">${this.totalPages}</button>`;
         }
         
-        // Next button
+        paginationHTML += '</div>'; // Close center section
+        
+        // Next button (fixed right position)
         if (this.currentPage < this.totalPages) {
-            paginationHTML += `<button class="pagination-btn" data-action="go-to-page" data-page="${this.currentPage + 1}">Next →</button>`;
+            paginationHTML += `<button class="pagination-btn next-btn" data-action="go-to-page" data-page="${this.currentPage + 1}">→</button>`;
         }
         
         paginationHTML += '</div>';
         
-        // Page info
+        // Page info (more compact)
         const startItem = (this.currentPage - 1) * this.gamesPerPage + 1;
         const endItem = Math.min(this.currentPage * this.gamesPerPage, this.totalCount);
-        paginationHTML += `<div class="pagination-info">Showing ${startItem}-${endItem} of ${this.totalCount} games</div>`;
+        const loadedGames = this.allGames.length;
+        paginationHTML += `<div class="pagination-info">${startItem}-${endItem} of ${this.totalCount} (${loadedGames} loaded)</div>`;
         
         paginationDiv.innerHTML = paginationHTML;
         this.resultsContainer.appendChild(paginationDiv);

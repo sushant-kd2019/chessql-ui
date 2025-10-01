@@ -10,6 +10,7 @@ body {
     background-color: #f5f5f5;
     color: #333;
     line-height: 1.6;
+    padding-bottom: 120px; /* Space for fixed pagination bar */
 }
 
 .app-container {
@@ -615,33 +616,66 @@ body {
 
 /* Pagination */
 .pagination-container {
-    grid-column: 1 / -1;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: white;
+    border-top: 1px solid #dee2e6;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 20px;
+    padding: 15px 20px;
     gap: 10px;
+    z-index: 1000;
 }
 
 .pagination {
+    position: relative;
     display: flex;
-    gap: 5px;
-    align-items: center;
-    flex-wrap: wrap;
     justify-content: center;
+    align-items: center;
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 0 60px; /* Space for fixed buttons */
+}
+
+.pagination-center {
+    display: flex;
+    gap: 3px;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.pagination-btn.prev-btn {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.pagination-btn.next-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
 }
 
 .pagination-btn {
     background: #f8f9fa;
     color: #333;
     border: 1px solid #dee2e6;
-    padding: 8px 12px;
+    padding: 6px 10px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     transition: all 0.3s;
-    min-width: 40px;
+    min-width: 36px;
     text-align: center;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .pagination-btn:hover {
@@ -672,4 +706,41 @@ body {
     color: #6c757d;
     font-size: 14px;
     text-align: center;
+}
+
+/* Responsive pagination for mobile */
+@media (max-width: 768px) {
+    .pagination-container {
+        padding: 8px 10px;
+    }
+    
+    .pagination {
+        padding: 0 50px; /* Smaller space for mobile */
+    }
+    
+    .pagination-center {
+        gap: 2px;
+    }
+    
+    .pagination-btn {
+        padding: 4px 6px;
+        font-size: 11px;
+        min-width: 28px;
+    }
+    
+    .pagination-btn.prev-btn {
+        left: 5px;
+    }
+    
+    .pagination-btn.next-btn {
+        right: 5px;
+    }
+    
+    .pagination-info {
+        font-size: 11px;
+    }
+    
+    body {
+        padding-bottom: 80px; /* Smaller space on mobile */
+    }
 }
