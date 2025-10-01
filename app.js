@@ -778,10 +778,7 @@ class ChessQLApp {
     }
 
     goToLastMove() {
-        this.currentMoveIndex = this.gameMoves.length;
-        this.chess.reset();
-        this.updateBoard();
-        this.animateMovesToPosition(this.gameMoves.length);
+        this.goToMoveDirect(this.gameMoves.length);
     }
 
     handleKeyPress(e) {
@@ -795,7 +792,7 @@ class ChessQLApp {
         }
         
         // Prevent default behavior for arrow keys
-        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
             e.preventDefault();
         }
         
@@ -807,6 +804,14 @@ class ChessQLApp {
             case 'ArrowRight':
                 console.log('Right arrow - going to next move');
                 this.nextMove();
+                break;
+            case 'ArrowUp':
+                console.log('Up arrow - going to first move');
+                this.goToFirstMove();
+                break;
+            case 'ArrowDown':
+                console.log('Down arrow - going to last move');
+                this.goToLastMove();
                 break;
         }
     }
