@@ -390,33 +390,6 @@ class ChessQLApp {
         }
     }
 
-    updateBoardAfterMove(moveObj) {
-        console.log('Updating board after move:', moveObj);
-        
-        // Only update the destination square (source piece already removed during animation)
-        const toSquare = document.querySelector(`[data-square="${moveObj.to}"]`);
-        console.log('To square found:', !!toSquare, moveObj.to);
-        if (toSquare) {
-            toSquare.innerHTML = '';
-            
-            const piece = this.chess.get(moveObj.to);
-            console.log('Piece at destination:', piece);
-            if (piece) {
-                const pieceSymbol = piece.color === 'w' ? piece.type.toUpperCase() : piece.type.toLowerCase();
-                const pieceElement = document.createElement('span');
-                pieceElement.textContent = this.getPieceSymbol(pieceSymbol);
-                pieceElement.className = `piece ${piece.color === 'w' ? 'white-piece' : 'black-piece'}`;
-                pieceElement.classList.add('landing');
-                toSquare.appendChild(pieceElement);
-                console.log('Added piece to destination square');
-                
-                // Remove landing animation after it completes
-                setTimeout(() => {
-                    pieceElement.classList.remove('landing');
-                }, 300);
-            }
-        }
-    }
 
     updateMovesList() {
         this.movesList.innerHTML = '';
@@ -498,6 +471,12 @@ class ChessQLApp {
     async animateNextMove(targetMoveIndex) {
         console.log('Animating next move from', this.currentMoveIndex, 'to', targetMoveIndex);
         
+        // Reset chess to current position and replay moves to ensure consistency
+        this.chess.reset();
+        for (let i = 0; i < this.currentMoveIndex; i++) {
+            this.chess.move(this.gameMoves[i]);
+        }
+        
         // Animate only the moves from current position to target
         for (let i = this.currentMoveIndex; i < targetMoveIndex && i < this.gameMoves.length; i++) {
             try {
@@ -518,14 +497,26 @@ class ChessQLApp {
                     this.chess.move(move);
                     console.log('Applied move to chess instance');
                     
-                    // Update only the affected squares instead of recreating the board
-                    this.updateBoardAfterMove(moveObj);
+                    // Update the entire board to ensure consistency
+                    this.updateBoard();
                     console.log('Updated board after move');
+                } else {
+                    console.log('Invalid move object, skipping animation');
+                    // Still try to apply the move
+                    this.chess.move(move);
+                    this.updateBoard();
                 }
                 
                 console.log('Completed move in navigation:', move);
             } catch (e) {
                 console.log('Error applying move in navigation:', this.gameMoves[i], e.message);
+                // If there's an error, try to continue with the next move
+                try {
+                    this.chess.move(this.gameMoves[i]);
+                    this.updateBoard();
+                } catch (e2) {
+                    console.log('Failed to apply move even without animation:', e2.message);
+                }
             }
         }
         
