@@ -73,6 +73,9 @@ class ChessQLApp {
         this.nextMoveBtn.addEventListener('click', () => this.nextMove());
         this.firstMoveBtn.addEventListener('click', () => this.goToFirstMove());
         this.lastMoveBtn.addEventListener('click', () => this.goToLastMove());
+        
+        // Keyboard navigation
+        document.addEventListener('keydown', (e) => this.handleKeyPress(e));
     }
 
     async performSearch() {
@@ -464,11 +467,9 @@ class ChessQLApp {
             console.log('Moving forward - using animateNextMove');
             this.animateNextMove(moveIndex);
         } else {
-            // If going backward, reset and animate to target
-            console.log('Moving backward - using animateMovesToPosition');
-            this.chess.reset();
-            this.updateBoard();
-            this.animateMovesToPosition(moveIndex);
+            // If going backward, animate only the previous move
+            console.log('Moving backward - using animatePreviousMove');
+            this.animatePreviousMove(moveIndex);
         }
     }
 
@@ -525,6 +526,41 @@ class ChessQLApp {
                 console.log('Completed move in navigation:', move);
             } catch (e) {
                 console.log('Error applying move in navigation:', this.gameMoves[i], e.message);
+            }
+        }
+        
+        this.currentMoveIndex = targetMoveIndex;
+        this.updateMoveControls();
+        this.highlightCurrentMove();
+    }
+
+    async animatePreviousMove(targetMoveIndex) {
+        console.log('Animating previous move from', this.currentMoveIndex, 'to', targetMoveIndex);
+        
+        // For going backward, we'll just undo moves without complex animation
+        // This is simpler and more reliable
+        for (let i = this.currentMoveIndex - 1; i >= targetMoveIndex; i--) {
+            try {
+                const move = this.gameMoves[i];
+                console.log('Undoing move', i, ':', move);
+                
+                // Undo the move in the actual chess instance
+                this.chess.undo();
+                console.log('Undid move in chess instance');
+                
+                // Update the board to reflect the undone position
+                this.updateBoard();
+                console.log('Updated board after undo');
+                
+                // Small delay to make the undo visible
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
+                console.log('Completed undo in navigation:', move);
+            } catch (e) {
+                console.log('Error undoing move in navigation:', this.gameMoves[i], e.message);
+                // If there's an error, just undo without animation
+                this.chess.undo();
+                this.updateBoard();
             }
         }
         
@@ -639,8 +675,8 @@ class ChessQLApp {
             
             // Small delay to ensure the piece is rendered before animation
             requestAnimationFrame(() => {
-                // Animate only position, not size - reduced timing
-                animatedPiece.style.transition = 'left 0.3s ease-in-out, top 0.3s ease-in-out';
+                // Animate only position, not size - very fast timing
+                animatedPiece.style.transition = 'left 0.1s ease-in-out, top 0.1s ease-in-out';
                 animatedPiece.style.left = toX + 'px';
                 animatedPiece.style.top = toY + 'px';
             });
@@ -650,7 +686,83 @@ class ChessQLApp {
                 // Remove animated piece
                 animatedPiece.remove();
                 resolve();
-            }, 300);
+            }, 100);
+        });
+    }
+
+    async animateReverseMove(moveObj) {
+        return new Promise((resolve) => {
+            const fromSquare = document.querySelector(`[data-square="${moveObj.from}"]`);
+            const toSquare = document.querySelector(`[data-square="${moveObj.to}"]`);
+            
+            if (!fromSquare || !toSquare) {
+                resolve();
+                return;
+            }
+            
+            // Get the piece element from the destination square (where it currently is)
+            const pieceElement = toSquare.querySelector('.piece');
+            if (!pieceElement) {
+                resolve();
+                return;
+            }
+            
+            // Clone the piece for animation
+            const animatedPiece = pieceElement.cloneNode(true);
+            animatedPiece.classList.add('moving');
+            
+            // Position the animated piece at the current location (destination)
+            const fromRect = fromSquare.getBoundingClientRect();
+            const toRect = toSquare.getBoundingClientRect();
+            const boardRect = this.chessBoard.getBoundingClientRect();
+            
+            // Calculate positions relative to the board
+            const fromX = fromRect.left - boardRect.left;
+            const fromY = fromRect.top - boardRect.top;
+            const toX = toRect.left - boardRect.left;
+            const toY = toRect.top - boardRect.top;
+            
+            // Use the source square size for consistent appearance
+            const squareSize = Math.min(fromRect.width, fromRect.height);
+            
+            animatedPiece.style.position = 'absolute';
+            animatedPiece.style.left = toX + 'px'; // Start at current position
+            animatedPiece.style.top = toY + 'px';
+            animatedPiece.style.pointerEvents = 'none';
+            animatedPiece.style.zIndex = '1000';
+            animatedPiece.style.width = squareSize + 'px';
+            animatedPiece.style.height = squareSize + 'px';
+            animatedPiece.style.margin = '0';
+            animatedPiece.style.padding = '0';
+            animatedPiece.style.fontSize = (squareSize * 0.8) + 'px';
+            animatedPiece.style.display = 'flex';
+            animatedPiece.style.alignItems = 'center';
+            animatedPiece.style.justifyContent = 'center';
+            
+            // Make sure the board has relative positioning for absolute children
+            if (getComputedStyle(this.chessBoard).position === 'static') {
+                this.chessBoard.style.position = 'relative';
+            }
+            
+            this.chessBoard.appendChild(animatedPiece);
+            
+            // Remove the current piece immediately when animation starts
+            pieceElement.remove();
+            
+            // Small delay to ensure the piece is rendered before animation
+            requestAnimationFrame(() => {
+                // Animate back to source position
+                animatedPiece.style.transition = 'left 0.1s ease-in-out, top 0.1s ease-in-out';
+                animatedPiece.style.left = fromX + 'px'; // Move back to source
+                animatedPiece.style.top = fromY + 'px';
+            });
+            
+            // After animation completes
+            setTimeout(() => {
+                // Remove animated piece
+                animatedPiece.remove();
+                resolve();
+            }, 100);
         });
     }
 
@@ -679,6 +791,33 @@ class ChessQLApp {
         this.chess.reset();
         this.updateBoard();
         this.animateMovesToPosition(this.gameMoves.length);
+    }
+
+    handleKeyPress(e) {
+        const isModalOpen = !this.gameModal.classList.contains('hidden');
+        console.log('Key pressed:', e.key, 'Modal open:', isModalOpen);
+        
+        // Only handle keyboard navigation when game modal is open
+        if (!isModalOpen) {
+            console.log('Modal not open, ignoring key press');
+            return;
+        }
+        
+        // Prevent default behavior for arrow keys
+        if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+            e.preventDefault();
+        }
+        
+        switch (e.key) {
+            case 'ArrowLeft':
+                console.log('Left arrow - going to previous move');
+                this.previousMove();
+                break;
+            case 'ArrowRight':
+                console.log('Right arrow - going to next move');
+                this.nextMove();
+                break;
+        }
     }
 
     highlightCurrentMove() {
