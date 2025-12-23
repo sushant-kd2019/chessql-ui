@@ -3,7 +3,9 @@ const path = require('path');
 const { spawn } = require('child_process');
 
 let mainWindow;
+let authWindow;
 let chessqlServer;
+let pendingOAuthData = null;
 
 function createWindow() {
   // Create the browser window
@@ -105,3 +107,105 @@ ipcMain.handle('api-request', async (event, { endpoint, method, data }) => {
     return { success: false, error: error.message };
   }
 });
+
+// Handle OAuth flow - open auth window
+ipcMain.handle('start-oauth', async (event, { authUrl, codeVerifier, state }) => {
+  return new Promise((resolve, reject) => {
+    // Store OAuth data for callback
+    pendingOAuthData = { codeVerifier, state };
+    
+    // Create OAuth window
+    authWindow = new BrowserWindow({
+      width: 600,
+      height: 700,
+      parent: mainWindow,
+      modal: true,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      },
+      title: 'Login with Lichess'
+    });
+
+    // Load the auth URL
+    authWindow.loadURL(authUrl);
+
+    // Listen for navigation to callback URL
+    authWindow.webContents.on('will-redirect', (event, url) => {
+      handleOAuthCallback(url, resolve, reject);
+    });
+
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      handleOAuthCallback(url, resolve, reject);
+    });
+
+    // Handle window close
+    authWindow.on('closed', () => {
+      authWindow = null;
+      if (pendingOAuthData) {
+        reject(new Error('OAuth window closed'));
+        pendingOAuthData = null;
+      }
+    });
+  });
+});
+
+async function handleOAuthCallback(url, resolve, reject) {
+  const callbackUrl = 'http://localhost:9090/auth/lichess/callback';
+  
+  if (url.startsWith(callbackUrl)) {
+    try {
+      const urlObj = new URL(url);
+      const code = urlObj.searchParams.get('code');
+      const state = urlObj.searchParams.get('state');
+      const error = urlObj.searchParams.get('error');
+
+      if (error) {
+        reject(new Error(error));
+        if (authWindow) {
+          authWindow.close();
+        }
+        return;
+      }
+
+      if (code && state && pendingOAuthData) {
+        // Exchange code for token using our backend
+        const fetch = require('node-fetch');
+        const response = await fetch(`http://localhost:9090/auth/lichess/callback`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            code: code,
+            state: state,
+            code_verifier: pendingOAuthData.codeVerifier
+          })
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+          resolve({ success: true, data: result });
+          
+          // Send success to renderer
+          if (mainWindow) {
+            mainWindow.webContents.send('oauth-success', result);
+          }
+        } else {
+          reject(new Error(result.detail || 'OAuth failed'));
+        }
+      }
+
+      pendingOAuthData = null;
+      if (authWindow) {
+        authWindow.close();
+      }
+    } catch (err) {
+      reject(err);
+      if (authWindow) {
+        authWindow.close();
+      }
+    }
+  }
+}

@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+const { ipcRenderer, shell } = require('electron');
 const { Chess } = require('chess.js');
 
 class ChessQLApp {
@@ -22,8 +22,14 @@ class ChessQLApp {
         this.allGames = []; // Store all loaded games
         this.currentBackendPage = 1; // Track which backend page we're on
         
+        // Accounts
+        this.accounts = [];
+        this.syncIntervals = {}; // Store sync status polling intervals
+        this.pendingOAuth = null; // Store pending OAuth data
+        
         this.initializeElements();
         this.bindEvents();
+        this.loadAccounts(); // Load accounts on startup
     }
 
     initializeElements() {
@@ -55,6 +61,27 @@ class ChessQLApp {
         this.nextMoveBtn = document.getElementById('nextMove');
         this.firstMoveBtn = document.getElementById('firstMove');
         this.lastMoveBtn = document.getElementById('lastMove');
+        
+        // Account elements
+        this.accountsBtn = document.getElementById('accountsBtn');
+        this.accountsBadge = document.getElementById('accountsBadge');
+        this.accountsPanel = document.getElementById('accountsPanel');
+        this.closeAccountsPanel = document.getElementById('closeAccountsPanel');
+        this.addAccountBtn = document.getElementById('addAccountBtn');
+        this.accountsList = document.getElementById('accountsList');
+        this.accountModal = document.getElementById('accountModal');
+        this.closeAccountModal = document.getElementById('closeAccountModal');
+        this.startOAuthBtn = document.getElementById('startOAuthBtn');
+        this.oauthStatus = document.getElementById('oauthStatus');
+        
+        // Sync toast elements
+        this.syncToast = document.getElementById('syncToast');
+        this.syncUsername = document.getElementById('syncUsername');
+        this.syncStatusText = document.getElementById('syncStatusText');
+        this.syncProgressFill = document.getElementById('syncProgressFill');
+        this.syncGamesCount = document.getElementById('syncGamesCount');
+        this.syncNewGames = document.getElementById('syncNewGames');
+        this.closeSyncToast = document.getElementById('closeSyncToast');
     }
 
     bindEvents() {
@@ -99,6 +126,379 @@ class ChessQLApp {
                 this.goToPage(page);
             }
         });
+        
+        // Account panel events
+        this.accountsBtn.addEventListener('click', () => this.toggleAccountsPanel());
+        this.closeAccountsPanel.addEventListener('click', () => this.hideAccountsPanel());
+        this.addAccountBtn.addEventListener('click', () => this.showAccountModal());
+        this.closeAccountModal.addEventListener('click', () => this.hideAccountModal());
+        this.startOAuthBtn.addEventListener('click', () => this.startOAuthFlow());
+        this.closeSyncToast.addEventListener('click', () => this.hideSyncToast());
+        
+        // Close account modal on background click
+        this.accountModal.addEventListener('click', (e) => {
+            if (e.target === this.accountModal) {
+                this.hideAccountModal();
+            }
+        });
+        
+        // Listen for OAuth success from main process
+        ipcRenderer.on('oauth-success', (event, data) => {
+            console.log('OAuth success:', data);
+            this.loadAccounts();
+            this.hideAccountModal();
+            this.oauthStatus.classList.add('hidden');
+            this.startOAuthBtn.disabled = false;
+        });
+    }
+
+    // ==================== Account Management ====================
+
+    async loadAccounts() {
+        try {
+            const response = await ipcRenderer.invoke('api-request', {
+                endpoint: '/auth/accounts',
+                method: 'GET'
+            });
+
+            if (response.success) {
+                this.accounts = response.data || [];
+                this.updateAccountsBadge();
+                this.renderAccountsList();
+            }
+        } catch (error) {
+            console.error('Failed to load accounts:', error);
+        }
+    }
+
+    updateAccountsBadge() {
+        if (this.accounts.length > 0) {
+            this.accountsBadge.textContent = this.accounts.length;
+            this.accountsBadge.classList.remove('hidden');
+        } else {
+            this.accountsBadge.classList.add('hidden');
+        }
+    }
+
+    toggleAccountsPanel() {
+        if (this.accountsPanel.classList.contains('hidden')) {
+            this.showAccountsPanel();
+        } else {
+            this.hideAccountsPanel();
+        }
+    }
+
+    showAccountsPanel() {
+        this.accountsPanel.classList.remove('hidden');
+        this.loadAccounts(); // Refresh accounts list
+    }
+
+    hideAccountsPanel() {
+        this.accountsPanel.classList.add('hidden');
+    }
+
+    showAccountModal() {
+        this.accountModal.classList.remove('hidden');
+        this.oauthStatus.classList.add('hidden');
+    }
+
+    hideAccountModal() {
+        this.accountModal.classList.add('hidden');
+        this.pendingOAuth = null;
+    }
+
+    async startOAuthFlow() {
+        try {
+            this.oauthStatus.classList.remove('hidden');
+            this.startOAuthBtn.disabled = true;
+
+            // Start OAuth flow - get auth URL from backend
+            const response = await ipcRenderer.invoke('api-request', {
+                endpoint: '/auth/lichess/start',
+                method: 'POST'
+            });
+
+            if (response.success && response.data.auth_url) {
+                // Open OAuth window in Electron
+                const oauthResult = await ipcRenderer.invoke('start-oauth', {
+                    authUrl: response.data.auth_url,
+                    codeVerifier: response.data.code_verifier,
+                    state: response.data.state
+                });
+
+                if (oauthResult.success) {
+                    // Refresh accounts list
+                    await this.loadAccounts();
+                    this.hideAccountModal();
+                    
+                    // Show success message
+                    const username = oauthResult.data.username || 'Unknown';
+                    alert(`Successfully linked account: ${username}`);
+                }
+            } else {
+                throw new Error(response.error || 'Failed to start OAuth flow');
+            }
+        } catch (error) {
+            console.error('OAuth flow error:', error);
+            if (error.message !== 'OAuth window closed') {
+                this.showError('Failed to link account: ' + error.message);
+            }
+        } finally {
+            this.oauthStatus.classList.add('hidden');
+            this.startOAuthBtn.disabled = false;
+        }
+    }
+
+    // Listen for OAuth success from main process
+    setupOAuthListener() {
+        ipcRenderer.on('oauth-success', (event, data) => {
+            console.log('OAuth success:', data);
+            this.loadAccounts();
+            this.hideAccountModal();
+        });
+    }
+
+    renderAccountsList() {
+        if (this.accounts.length === 0) {
+            this.accountsList.innerHTML = `
+                <div class="no-accounts">
+                    <p>No accounts linked yet.</p>
+                    <p class="hint">Click "Link Lichess Account" to get started.</p>
+                </div>
+            `;
+            return;
+        }
+
+        this.accountsList.innerHTML = this.accounts.map(account => this.createAccountCard(account)).join('');
+
+        // Bind events for account cards
+        this.accountsList.querySelectorAll('.sync-btn.primary').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                this.startSync(username);
+            });
+        });
+
+        this.accountsList.querySelectorAll('.sync-btn.secondary').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                this.startFullSync(username);
+            });
+        });
+
+        this.accountsList.querySelectorAll('.account-action-btn.delete').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                this.deleteAccount(username);
+            });
+        });
+
+        this.accountsList.querySelectorAll('.account-action-btn.refresh').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const username = btn.dataset.username;
+                this.refreshAccountStatus(username);
+            });
+        });
+    }
+
+    createAccountCard(account) {
+        const lastSync = account.last_sync_at 
+            ? new Date(account.last_sync_at).toLocaleDateString() 
+            : 'Never';
+        const gamesCount = account.games_count || 0;
+        const initial = (account.username || 'U')[0].toUpperCase();
+        
+        return `
+            <div class="account-card" data-username="${account.username}">
+                <div class="account-card-header">
+                    <div class="account-info">
+                        <div class="account-avatar">${initial}</div>
+                        <div class="account-details">
+                            <span class="account-username">${account.username}</span>
+                            <span class="account-status">
+                                <span class="status-dot"></span>
+                                Connected
+                            </span>
+                        </div>
+                    </div>
+                    <div class="account-actions">
+                        <button class="account-action-btn refresh" data-username="${account.username}" title="Refresh status">
+                            🔄
+                        </button>
+                        <button class="account-action-btn delete" data-username="${account.username}" title="Remove account">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+                <div class="account-stats">
+                    <div class="stat-item">
+                        <div class="stat-value">${gamesCount.toLocaleString()}</div>
+                        <div class="stat-label">Games</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">${lastSync}</div>
+                        <div class="stat-label">Last Sync</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value">✓</div>
+                        <div class="stat-label">Status</div>
+                    </div>
+                </div>
+                <div class="account-sync-section">
+                    <button class="sync-btn primary" data-username="${account.username}">
+                        🔄 Sync New Games
+                    </button>
+                    <button class="sync-btn secondary" data-username="${account.username}">
+                        Full Sync
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    async startSync(username, fullSync = false) {
+        try {
+            const response = await ipcRenderer.invoke('api-request', {
+                endpoint: `/sync/start/${username}`,
+                method: 'POST',
+                data: { full_sync: fullSync }
+            });
+
+            if (response.success) {
+                this.showSyncToast(username);
+                this.startSyncPolling(username);
+            } else {
+                throw new Error(response.error || 'Failed to start sync');
+            }
+        } catch (error) {
+            console.error('Sync error:', error);
+            this.showError('Failed to start sync: ' + error.message);
+        }
+    }
+
+    startFullSync(username) {
+        if (confirm(`This will re-sync all games for ${username}. This may take a while. Continue?`)) {
+            this.startSync(username, true);
+        }
+    }
+
+    showSyncToast(username) {
+        this.syncUsername.textContent = username;
+        this.syncStatusText.textContent = 'Starting...';
+        this.syncProgressFill.style.width = '0%';
+        this.syncGamesCount.textContent = '0 games';
+        this.syncNewGames.textContent = '0 new';
+        this.syncToast.classList.remove('hidden');
+    }
+
+    hideSyncToast() {
+        this.syncToast.classList.add('hidden');
+    }
+
+    startSyncPolling(username) {
+        // Clear any existing interval
+        if (this.syncIntervals[username]) {
+            clearInterval(this.syncIntervals[username]);
+        }
+
+        // Poll every 1 second
+        this.syncIntervals[username] = setInterval(async () => {
+            try {
+                const response = await ipcRenderer.invoke('api-request', {
+                    endpoint: `/sync/status/${username}`,
+                    method: 'GET'
+                });
+
+                if (response.success) {
+                    this.updateSyncProgress(username, response.data);
+                }
+            } catch (error) {
+                console.error('Sync polling error:', error);
+            }
+        }, 1000);
+    }
+
+    updateSyncProgress(username, progress) {
+        this.syncUsername.textContent = username;
+        this.syncStatusText.textContent = progress.status || 'Syncing...';
+        
+        const syncedGames = progress.synced_games || 0;
+        const newGames = progress.new_games || 0;
+        const totalGames = progress.total_games || 0;
+        
+        // Calculate progress percentage
+        let percentage = 0;
+        if (totalGames > 0) {
+            percentage = Math.round((syncedGames / totalGames) * 100);
+        } else if (syncedGames > 0) {
+            // If we don't know total, just show activity
+            percentage = Math.min(90, syncedGames);
+        }
+        
+        this.syncProgressFill.style.width = `${percentage}%`;
+        this.syncGamesCount.textContent = `${syncedGames.toLocaleString()} games`;
+        this.syncNewGames.textContent = `${newGames.toLocaleString()} new`;
+
+        // Check if sync is complete
+        if (progress.status === 'completed' || progress.status === 'cancelled' || progress.status === 'error') {
+            clearInterval(this.syncIntervals[username]);
+            delete this.syncIntervals[username];
+            
+            // Update the accounts list
+            this.loadAccounts();
+            
+            // Show completion message
+            if (progress.status === 'completed') {
+                this.syncStatusText.textContent = 'Complete!';
+                this.syncProgressFill.style.width = '100%';
+                
+                // Auto-hide toast after 3 seconds
+                setTimeout(() => this.hideSyncToast(), 3000);
+            } else if (progress.status === 'error') {
+                this.syncStatusText.textContent = 'Error: ' + (progress.error_message || 'Unknown error');
+            }
+        }
+    }
+
+    async deleteAccount(username) {
+        if (!confirm(`Are you sure you want to remove the account "${username}"? This will not delete your synced games.`)) {
+            return;
+        }
+
+        try {
+            const response = await ipcRenderer.invoke('api-request', {
+                endpoint: `/auth/accounts/${username}`,
+                method: 'DELETE'
+            });
+
+            if (response.success) {
+                await this.loadAccounts();
+            } else {
+                throw new Error(response.error || 'Failed to delete account');
+            }
+        } catch (error) {
+            console.error('Delete account error:', error);
+            this.showError('Failed to remove account: ' + error.message);
+        }
+    }
+
+    async refreshAccountStatus(username) {
+        try {
+            const response = await ipcRenderer.invoke('api-request', {
+                endpoint: `/auth/accounts/${username}/verify`,
+                method: 'GET'
+            });
+
+            if (response.success) {
+                if (response.data.valid) {
+                    alert(`Account "${username}" is valid and connected.`);
+                } else {
+                    alert(`Account "${username}" token is invalid or expired. Please re-link the account.`);
+                }
+            }
+        } catch (error) {
+            console.error('Verify account error:', error);
+        }
     }
 
     async performSearch() {

@@ -8,8 +8,21 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Header with search -->
+        <!-- Header with search and accounts -->
         <header class="header">
+            <div class="header-top">
+                <div class="logo">
+                    <span class="logo-icon">♔</span>
+                    <span class="logo-text">ChessQL</span>
+                </div>
+                <div class="header-actions">
+                    <button id="accountsBtn" class="accounts-btn">
+                        <span class="accounts-icon">👤</span>
+                        <span class="accounts-label">Accounts</span>
+                        <span id="accountsBadge" class="accounts-badge hidden">0</span>
+                    </button>
+                </div>
+            </div>
             <div class="search-container">
                 <input type="text" id="queryInput" placeholder="Search chess games... (e.g., 'lecorvus won', 'queen sacrificed')" />
                 <button id="searchBtn">Search</button>
@@ -26,6 +39,76 @@
                 </label>
             </div>
         </header>
+
+        <!-- Accounts Panel (Sidebar) -->
+        <div id="accountsPanel" class="accounts-panel hidden">
+            <div class="accounts-panel-header">
+                <h2>Lichess Accounts</h2>
+                <button id="closeAccountsPanel" class="close-btn">&times;</button>
+            </div>
+            <div class="accounts-panel-content">
+                <!-- Add Account Section -->
+                <div class="add-account-section">
+                    <button id="addAccountBtn" class="add-account-btn">
+                        <span class="add-icon">+</span>
+                        <span>Link Lichess Account</span>
+                    </button>
+                </div>
+
+                <!-- Accounts List -->
+                <div id="accountsList" class="accounts-list">
+                    <div class="no-accounts">
+                        <p>No accounts linked yet.</p>
+                        <p class="hint">Click "Link Lichess Account" to get started.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Modal (for OAuth flow) -->
+        <div id="accountModal" class="modal hidden">
+            <div class="modal-content account-modal-content">
+                <div class="modal-header">
+                    <h2 id="accountModalTitle">Link Lichess Account</h2>
+                    <button id="closeAccountModal" class="close-btn">&times;</button>
+                </div>
+                <div class="modal-body account-modal-body">
+                    <div id="oauthStep" class="oauth-step">
+                        <p class="oauth-description">
+                            Connect your Lichess account to sync and analyze your games.
+                        </p>
+                        <div class="oauth-actions">
+                            <button id="startOAuthBtn" class="oauth-btn">
+                                <span class="lichess-logo">♞</span>
+                                Login with Lichess
+                            </button>
+                        </div>
+                        <div id="oauthStatus" class="oauth-status hidden">
+                            <div class="spinner"></div>
+                            <span>Waiting for authorization...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sync Progress Toast -->
+        <div id="syncToast" class="sync-toast hidden">
+            <div class="sync-toast-content">
+                <div class="sync-info">
+                    <span id="syncUsername" class="sync-username">-</span>
+                    <span id="syncStatusText" class="sync-status-text">Syncing...</span>
+                </div>
+                <div class="sync-progress-bar">
+                    <div id="syncProgressFill" class="sync-progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="sync-stats">
+                    <span id="syncGamesCount">0 games</span>
+                    <span id="syncNewGames" class="sync-new">0 new</span>
+                </div>
+            </div>
+            <button id="closeSyncToast" class="sync-toast-close">&times;</button>
+        </div>
 
         <!-- Loading indicator -->
         <div id="loadingIndicator" class="loading hidden">
