@@ -24,7 +24,14 @@
                 </div>
             </div>
             <div class="search-container">
-                <input type="text" id="queryInput" placeholder="Search chess games... (e.g., 'lecorvus won', 'queen sacrificed')" />
+                <div class="account-selector">
+                    <label for="accountSelect" class="account-selector-label">Playing as:</label>
+                    <select id="accountSelect" class="account-select">
+                        <option value="">All accounts</option>
+                        <!-- Options populated dynamically -->
+                    </select>
+                </div>
+                <input type="text" id="queryInput" placeholder="Search chess games... (e.g., 'my wins', 'games where I sacrificed queen')" />
                 <button id="searchBtn">Search</button>
                 <button id="clearBtn">Clear</button>
             </div>

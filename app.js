@@ -74,6 +74,9 @@ class ChessQLApp {
         this.startOAuthBtn = document.getElementById('startOAuthBtn');
         this.oauthStatus = document.getElementById('oauthStatus');
         
+        // Account selector in search
+        this.accountSelect = document.getElementById('accountSelect');
+        
         // Sync toast elements
         this.syncToast = document.getElementById('syncToast');
         this.syncUsername = document.getElementById('syncUsername');
@@ -165,10 +168,39 @@ class ChessQLApp {
                 this.accounts = response.data || [];
                 this.updateAccountsBadge();
                 this.renderAccountsList();
+                this.updateAccountSelector();
             }
         } catch (error) {
             console.error('Failed to load accounts:', error);
         }
+    }
+
+    updateAccountSelector() {
+        // Preserve current selection
+        const currentValue = this.accountSelect.value;
+        
+        // Clear existing options except "All accounts"
+        this.accountSelect.innerHTML = '<option value="">All accounts</option>';
+        
+        // Add account options
+        this.accounts.forEach(account => {
+            const option = document.createElement('option');
+            option.value = account.username;
+            option.textContent = account.username;
+            this.accountSelect.appendChild(option);
+        });
+        
+        // Restore selection if still valid
+        if (currentValue && this.accounts.some(a => a.username === currentValue)) {
+            this.accountSelect.value = currentValue;
+        } else if (this.accounts.length === 1) {
+            // Auto-select if only one account
+            this.accountSelect.value = this.accounts[0].username;
+        }
+    }
+
+    getSelectedAccount() {
+        return this.accountSelect.value || null;
     }
 
     updateAccountsBadge() {
@@ -542,9 +574,23 @@ class ChessQLApp {
     async searchGames(query, searchType, page = 1) {
         const endpoint = searchType === 'natural' ? '/ask' : '/cql';
         const offset = (page - 1) * this.backendPageSize;
+        const selectedAccount = this.getSelectedAccount();
+        
         const data = searchType === 'natural' 
-            ? { question: query, limit: this.backendPageSize, page_no: page, offset: offset }
-            : { query: query, limit: this.backendPageSize, page_no: page, offset: offset };
+            ? { 
+                question: query, 
+                limit: this.backendPageSize, 
+                page_no: page, 
+                offset: offset,
+                reference_player: selectedAccount  // Pass selected account for context
+            }
+            : { 
+                query: query, 
+                limit: this.backendPageSize, 
+                page_no: page, 
+                offset: offset,
+                reference_player: selectedAccount  // Pass selected account for filtering
+            };
 
         const response = await ipcRenderer.invoke('api-request', {
             endpoint: endpoint,

@@ -521,6 +521,49 @@ body {
     display: flex;
     gap: 10px;
     margin-bottom: 15px;
+    align-items: center;
+}
+
+/* Account selector in search */
+.account-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.15);
+    padding: 8px 12px;
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.account-selector-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.9);
+    white-space: nowrap;
+}
+
+.account-select {
+    padding: 6px 10px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 6px;
+    background: rgba(255,255,255,0.9);
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    min-width: 140px;
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.account-select:hover {
+    background: white;
+    border-color: rgba(255,255,255,0.5);
+}
+
+.account-select:focus {
+    background: white;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.3);
 }
 
 #queryInput {
