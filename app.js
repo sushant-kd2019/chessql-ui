@@ -64,6 +64,10 @@ class ChessQLApp {
         this.nextMoveBtn = document.getElementById('nextMove');
         this.firstMoveBtn = document.getElementById('firstMove');
         this.lastMoveBtn = document.getElementById('lastMove');
+        this.flipBoardBtn = document.getElementById('flipBoardBtn');
+        
+        // Board state
+        this.isBoardFlipped = false;
         
         // Account elements
         this.accountsBtn = document.getElementById('accountsBtn');
@@ -120,6 +124,9 @@ class ChessQLApp {
         this.nextMoveBtn.addEventListener('click', () => this.nextMove());
         this.firstMoveBtn.addEventListener('click', () => this.goToFirstMove());
         this.lastMoveBtn.addEventListener('click', () => this.goToLastMove());
+        
+        // Flip board button
+        this.flipBoardBtn.addEventListener('click', () => this.flipBoard());
         
         // Keyboard navigation
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
@@ -909,6 +916,16 @@ class ChessQLApp {
         });
     }
 
+    flipBoard() {
+        this.isBoardFlipped = !this.isBoardFlipped;
+        
+        if (this.isBoardFlipped) {
+            this.chessBoard.classList.add('flipped');
+        } else {
+            this.chessBoard.classList.remove('flipped');
+        }
+    }
+
     createMiniChessBoard(game) {
         const board = document.createElement('div');
         board.className = 'chess-board-mini';
@@ -1006,6 +1023,10 @@ class ChessQLApp {
     openGameModal(game) {
         this.currentGame = game;
         this.currentMoveIndex = 0;
+        
+        // Reset board orientation
+        this.isBoardFlipped = false;
+        this.chessBoard.classList.remove('flipped');
         
         // Update modal content
         this.gameTitle.textContent = `${game.white_player || 'White'} vs ${game.black_player || 'Black'}`;
@@ -1354,19 +1375,35 @@ class ChessQLApp {
             const animatedPiece = pieceElement.cloneNode(true);
             animatedPiece.classList.add('moving');
             
-            // Position the animated piece at the source
+            // Get bounding rects (these are in screen coordinates)
             const fromRect = fromSquare.getBoundingClientRect();
             const toRect = toSquare.getBoundingClientRect();
             const boardRect = this.chessBoard.getBoundingClientRect();
             
-            // Calculate positions relative to the board
-            const fromX = fromRect.left - boardRect.left;
-            const fromY = fromRect.top - boardRect.top;
-            const toX = toRect.left - boardRect.left;
-            const toY = toRect.top - boardRect.top;
-            
             // Use the destination square size for consistent appearance
             const squareSize = Math.min(toRect.width, toRect.height);
+            
+            // Calculate positions relative to board's screen position
+            // When the board is flipped (rotated 180deg), we need to convert screen coords
+            // to the rotated coordinate system
+            let fromX, fromY, toX, toY;
+            
+            if (this.isBoardFlipped) {
+                // When board is rotated 180deg, the coordinate system is inverted
+                // We need to map screen coords to the rotated local coords
+                fromX = boardRect.right - fromRect.right;
+                fromY = boardRect.bottom - fromRect.bottom;
+                toX = boardRect.right - toRect.right;
+                toY = boardRect.bottom - toRect.bottom;
+                
+                // Rotate the piece to appear right-side up
+                animatedPiece.style.transform = 'rotate(180deg)';
+            } else {
+                fromX = fromRect.left - boardRect.left;
+                fromY = fromRect.top - boardRect.top;
+                toX = toRect.left - boardRect.left;
+                toY = toRect.top - boardRect.top;
+            }
             
             animatedPiece.style.position = 'absolute';
             animatedPiece.style.left = fromX + 'px';
@@ -1377,7 +1414,7 @@ class ChessQLApp {
             animatedPiece.style.height = squareSize + 'px';
             animatedPiece.style.margin = '0';
             animatedPiece.style.padding = '0';
-            animatedPiece.style.fontSize = (squareSize * 0.8) + 'px'; // Scale font size to square
+            animatedPiece.style.fontSize = (squareSize * 0.8) + 'px';
             animatedPiece.style.display = 'flex';
             animatedPiece.style.alignItems = 'center';
             animatedPiece.style.justifyContent = 'center';
@@ -1400,7 +1437,6 @@ class ChessQLApp {
             
             // Small delay to ensure the piece is rendered before animation
             requestAnimationFrame(() => {
-                // Animate only position, not size - very fast timing
                 animatedPiece.style.transition = 'left 0.1s ease-in-out, top 0.1s ease-in-out';
                 animatedPiece.style.left = toX + 'px';
                 animatedPiece.style.top = toY + 'px';
@@ -1408,7 +1444,6 @@ class ChessQLApp {
             
             // After animation completes
             setTimeout(() => {
-                // Remove animated piece
                 animatedPiece.remove();
                 resolve();
             }, 100);
@@ -1436,19 +1471,29 @@ class ChessQLApp {
             const animatedPiece = pieceElement.cloneNode(true);
             animatedPiece.classList.add('moving');
             
-            // Position the animated piece at the current location (destination)
+            // Get bounding rects
             const fromRect = fromSquare.getBoundingClientRect();
             const toRect = toSquare.getBoundingClientRect();
             const boardRect = this.chessBoard.getBoundingClientRect();
             
-            // Calculate positions relative to the board
-            const fromX = fromRect.left - boardRect.left;
-            const fromY = fromRect.top - boardRect.top;
-            const toX = toRect.left - boardRect.left;
-            const toY = toRect.top - boardRect.top;
-            
             // Use the source square size for consistent appearance
             const squareSize = Math.min(fromRect.width, fromRect.height);
+            
+            // Calculate positions based on board orientation
+            let fromX, fromY, toX, toY;
+            
+            if (this.isBoardFlipped) {
+                fromX = boardRect.right - fromRect.right;
+                fromY = boardRect.bottom - fromRect.bottom;
+                toX = boardRect.right - toRect.right;
+                toY = boardRect.bottom - toRect.bottom;
+                animatedPiece.style.transform = 'rotate(180deg)';
+            } else {
+                fromX = fromRect.left - boardRect.left;
+                fromY = fromRect.top - boardRect.top;
+                toX = toRect.left - boardRect.left;
+                toY = toRect.top - boardRect.top;
+            }
             
             animatedPiece.style.position = 'absolute';
             animatedPiece.style.left = toX + 'px'; // Start at current position
@@ -1476,7 +1521,6 @@ class ChessQLApp {
             
             // Small delay to ensure the piece is rendered before animation
             requestAnimationFrame(() => {
-                // Animate back to source position
                 animatedPiece.style.transition = 'left 0.1s ease-in-out, top 0.1s ease-in-out';
                 animatedPiece.style.left = fromX + 'px'; // Move back to source
                 animatedPiece.style.top = fromY + 'px';
@@ -1484,7 +1528,6 @@ class ChessQLApp {
             
             // After animation completes
             setTimeout(() => {
-                // Remove animated piece
                 animatedPiece.remove();
                 resolve();
             }, 100);
@@ -1546,6 +1589,11 @@ class ChessQLApp {
             case 'ArrowDown':
                 console.log('Down arrow - going to last move');
                 this.goToLastMove();
+                break;
+            case 'f':
+            case 'F':
+                console.log('F key - flipping board');
+                this.flipBoard();
                 break;
         }
     }
