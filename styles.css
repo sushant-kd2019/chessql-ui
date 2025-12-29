@@ -1357,11 +1357,13 @@ body {
     justify-content: space-between;
     align-items: center;
     margin-bottom: 15px;
+    gap: 15px;
 }
 
 .moves-header h3 {
     margin: 0;
     color: #333;
+    flex-shrink: 0;
 }
 
 .move-controls {
