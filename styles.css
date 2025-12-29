@@ -1097,51 +1097,57 @@ body {
     font-size: 0.85em;
 }
 
-/* Details Grid */
+/* Details Grid - All three items in one row */
 .details-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    display: flex;
+    flex-direction: row;
     gap: 12px;
-    padding: 16px;
+    padding: 12px;
     background: #f8f9fa;
     border-radius: 10px;
 }
 
 .detail-item {
     display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 10px 12px;
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
     background: white;
-    border-radius: 8px;
+    border-radius: 6px;
     border: 1px solid #e9ecef;
+    flex: 1;
+    min-width: 0;
+}
+
+.detail-item:not(.site-detail) {
+    overflow: hidden;
 }
 
 .detail-label {
     font-size: 0.75em;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     color: #888;
+    flex-shrink: 0;
 }
 
 .detail-value {
-    font-size: 0.95em;
+    font-size: 0.85em;
     color: #333;
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
 }
 
 /* Truncation with tooltip */
 .detail-value.truncate {
-    max-width: 200px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
     cursor: help;
 }
 
 .opening-detail {
-    grid-column: span 2;
+    flex: 1.5;
 }
 
 .opening-detail .detail-value.truncate {
@@ -1149,7 +1155,7 @@ body {
 }
 
 .site-detail {
-    overflow: hidden;
+    overflow: visible !important;
 }
 
 .site-detail .detail-value {
@@ -1160,8 +1166,9 @@ body {
     display: flex;
     flex-direction: row;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     width: 100%;
+    overflow: hidden;
 }
 
 .site-value-row .detail-value {
@@ -1184,20 +1191,21 @@ body {
 /* Copy button */
 .copy-btn {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    min-width: 24px;
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
     padding: 0;
     border: 1px solid #e0e0e0;
     border-radius: 4px;
     background: #f8f9fa;
     cursor: pointer;
-    font-size: 12px;
+    font-size: 11px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     transition: all 0.2s ease;
     line-height: 1;
+    margin-left: auto;
 }
 
 .copy-btn:hover {
