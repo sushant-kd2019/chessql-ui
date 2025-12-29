@@ -52,6 +52,8 @@ class ChessQLApp {
         this.blackPlayerElo = document.getElementById('blackPlayerElo');
         this.gameResult = document.getElementById('gameResult');
         this.gameDate = document.getElementById('gameDate');
+        this.gameTimeControl = document.getElementById('gameTimeControl');
+        this.gameSpeed = document.getElementById('gameSpeed');
         this.gameSite = document.getElementById('gameSite');
         this.gameOpening = document.getElementById('gameOpening');
         this.gameTermination = document.getElementById('gameTermination');
@@ -785,6 +787,14 @@ class ChessQLApp {
         const thumbnail = document.createElement('div');
         thumbnail.className = 'game-thumbnail';
         
+        // Add speed badge overlay if speed is available
+        if (game.speed) {
+            const speedBadge = document.createElement('div');
+            speedBadge.className = `speed-badge-overlay speed-${game.speed.toLowerCase()}`;
+            speedBadge.textContent = this.formatSpeed(game.speed);
+            thumbnail.appendChild(speedBadge);
+        }
+        
         // Create mini chess board
         const miniBoard = this.createMiniChessBoard(game);
         thumbnail.appendChild(miniBoard);
@@ -800,18 +810,56 @@ class ChessQLApp {
         result.className = 'game-result';
         result.textContent = `Result: ${game.result || 'Unknown'}`;
         
-        const date = document.createElement('div');
+        // Add time control and date row
+        const metaRow = document.createElement('div');
+        metaRow.className = 'game-meta-row';
+        
+        const date = document.createElement('span');
         date.className = 'game-date';
         date.textContent = game.date_played || 'Unknown date';
+        metaRow.appendChild(date);
+        
+        if (game.time_control) {
+            const timeControl = document.createElement('span');
+            timeControl.className = 'game-time-control';
+            timeControl.textContent = this.formatTimeControl(game.time_control);
+            metaRow.appendChild(timeControl);
+        }
 
         info.appendChild(players);
         info.appendChild(result);
-        info.appendChild(date);
+        info.appendChild(metaRow);
 
         card.appendChild(thumbnail);
         card.appendChild(info);
 
         return card;
+    }
+
+    formatSpeed(speed) {
+        // Format speed for display
+        const speedLabels = {
+            'ultraBullet': '⚡ UltraBullet',
+            'bullet': '🔫 Bullet',
+            'blitz': '⚡ Blitz',
+            'rapid': '🕐 Rapid',
+            'classical': '♟️ Classical',
+            'correspondence': '📬 Correspondence'
+        };
+        return speedLabels[speed] || speed;
+    }
+
+    formatTimeControl(timeControl) {
+        // Format time control for display (e.g., "300+0" -> "5+0")
+        if (!timeControl) return '';
+        
+        const match = timeControl.match(/^(\d+)\+(\d+)$/);
+        if (match) {
+            const minutes = Math.floor(parseInt(match[1]) / 60);
+            const increment = match[2];
+            return `${minutes}+${increment}`;
+        }
+        return timeControl;
     }
 
     createMiniChessBoard(game) {
@@ -920,6 +968,18 @@ class ChessQLApp {
         this.blackPlayerElo.textContent = game.black_elo ? `(${game.black_elo})` : '';
         this.gameResult.textContent = game.result || 'Unknown';
         this.gameDate.textContent = game.date_played || 'Unknown';
+        
+        // Time control and speed
+        this.gameTimeControl.textContent = game.time_control ? this.formatTimeControl(game.time_control) : 'Unknown';
+        
+        // Update speed badge with appropriate styling
+        if (game.speed) {
+            this.gameSpeed.textContent = this.formatSpeed(game.speed);
+            this.gameSpeed.className = `speed-badge speed-${game.speed.toLowerCase()}`;
+        } else {
+            this.gameSpeed.textContent = 'Unknown';
+            this.gameSpeed.className = 'speed-badge';
+        }
         
         // Handle site field - make it clickable if it's a URL
         const site = game.site || 'Unknown';

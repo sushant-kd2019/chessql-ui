@@ -850,6 +850,74 @@ body {
     font-size: 0.8em;
 }
 
+/* Game meta row for date and time control */
+.game-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.game-time-control {
+    color: #667eea;
+    font-size: 0.85em;
+    font-weight: 600;
+    background: #f0f0ff;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+/* Speed badge overlay on thumbnails */
+.speed-badge-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    z-index: 10;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+/* Speed badge in modal */
+.speed-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: 600;
+    color: white;
+}
+
+/* Speed-specific colors */
+.speed-ultrabullet {
+    background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+}
+
+.speed-bullet {
+    background: linear-gradient(135deg, #ff8c42, #ff7b2e);
+}
+
+.speed-blitz {
+    background: linear-gradient(135deg, #ffd93d, #f0c419);
+    color: #333;
+}
+
+.speed-rapid {
+    background: linear-gradient(135deg, #6bcb77, #4caf50);
+}
+
+.speed-classical {
+    background: linear-gradient(135deg, #4d96ff, #3b82f6);
+}
+
+.speed-correspondence {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
 /* Modal styles */
 .modal {
     position: fixed;
