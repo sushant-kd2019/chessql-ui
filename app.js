@@ -648,13 +648,17 @@ class ChessQLApp {
         const requiredBackendPage = Math.ceil((page * this.gamesPerPage) / this.backendPageSize);
         
         if (requiredBackendPage > this.currentBackendPage) {
-            console.log('Need to load backend page:', requiredBackendPage);
+            console.log('Need to load backend pages from', this.currentBackendPage + 1, 'to', requiredBackendPage);
             this.showLoading(true);
             
             try {
-                const newGames = await this.searchGames(this.currentQuery, this.currentSearchType, requiredBackendPage);
-                this.allGames = [...this.allGames, ...newGames]; // Append new games
-                this.currentBackendPage = requiredBackendPage;
+                // Load ALL intermediate backend pages, not just the target one
+                for (let backendPage = this.currentBackendPage + 1; backendPage <= requiredBackendPage; backendPage++) {
+                    console.log('Loading backend page:', backendPage);
+                    const newGames = await this.searchGames(this.currentQuery, this.currentSearchType, backendPage);
+                    this.allGames = [...this.allGames, ...newGames]; // Append new games
+                    this.currentBackendPage = backendPage;
+                }
             } catch (error) {
                 console.error('Failed to load backend page:', error);
                 this.showError('Failed to load more games: ' + error.message);
