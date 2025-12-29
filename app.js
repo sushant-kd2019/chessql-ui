@@ -55,6 +55,7 @@ class ChessQLApp {
         this.gameTimeControl = document.getElementById('gameTimeControl');
         this.gameSpeed = document.getElementById('gameSpeed');
         this.gameSite = document.getElementById('gameSite');
+        this.copySiteBtn = document.getElementById('copySiteBtn');
         this.gameOpening = document.getElementById('gameOpening');
         this.gameTermination = document.getElementById('gameTermination');
         
@@ -122,6 +123,12 @@ class ChessQLApp {
         
         // Keyboard navigation
         document.addEventListener('keydown', (e) => this.handleKeyPress(e));
+        
+        // Copy site URL button
+        this.copySiteBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.copySiteUrl();
+        });
         
         // Event delegation for pagination buttons
         document.addEventListener('click', (e) => {
@@ -862,6 +869,46 @@ class ChessQLApp {
         return timeControl;
     }
 
+    formatTermination(termination) {
+        // Format termination reason for better readability
+        if (!termination) return '';
+        
+        const terminationLabels = {
+            'mate': 'Checkmate',
+            'resign': 'Resignation',
+            'outoftime': 'Timeout',
+            'timeout': 'Timeout',
+            'draw': 'Draw',
+            'stalemate': 'Stalemate',
+            'normal': 'Normal',
+            'abandoned': 'Abandoned',
+            'cheat': 'Terminated'
+        };
+        
+        return terminationLabels[termination.toLowerCase()] || termination;
+    }
+
+    copySiteUrl() {
+        const site = this.currentGame?.site;
+        if (!site || site === 'Unknown') {
+            return;
+        }
+        
+        navigator.clipboard.writeText(site).then(() => {
+            // Visual feedback
+            this.copySiteBtn.textContent = '✓';
+            this.copySiteBtn.classList.add('copied');
+            
+            // Reset after 2 seconds
+            setTimeout(() => {
+                this.copySiteBtn.textContent = '📋';
+                this.copySiteBtn.classList.remove('copied');
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy URL:', err);
+        });
+    }
+
     createMiniChessBoard(game) {
         const board = document.createElement('div');
         board.className = 'chess-board-mini';
@@ -989,8 +1036,13 @@ class ChessQLApp {
             this.gameSite.textContent = site;
         }
         
-        this.gameOpening.textContent = game.opening || 'Unknown';
-        this.gameTermination.textContent = game.termination || 'Unknown';
+        // Opening with tooltip for full name on hover
+        const openingName = game.opening || 'Unknown';
+        this.gameOpening.textContent = openingName;
+        this.gameOpening.title = openingName; // Tooltip shows full name on hover
+        
+        // Termination with formatted text
+        this.gameTermination.textContent = this.formatTermination(game.termination) || 'Unknown';
         
         // Load the game
         this.loadGame(game);

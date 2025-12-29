@@ -151,47 +151,59 @@
                     <button id="closeModal" class="close-btn">&times;</button>
                 </div>
                 <div class="modal-body">
-                    <div class="game-info">
-                        <div class="players">
-                            <div class="white-player">
-                                <span class="player-label">White:</span>
-                                <span id="whitePlayerName">-</span>
-                                <span id="whitePlayerElo" class="elo">-</span>
+                    <div class="game-info-panel">
+                        <!-- Players Section -->
+                        <div class="players-section">
+                            <div class="player-card white">
+                                <div class="player-color-indicator"></div>
+                                <div class="player-details">
+                                    <span id="whitePlayerName" class="player-name">-</span>
+                                    <span id="whitePlayerElo" class="player-elo">-</span>
+                                </div>
                             </div>
-                            <div class="black-player">
-                                <span class="player-label">Black:</span>
-                                <span id="blackPlayerName">-</span>
-                                <span id="blackPlayerElo" class="elo">-</span>
+                            <div class="vs-badge">
+                                <span id="gameResult" class="result-text">-</span>
+                            </div>
+                            <div class="player-card black">
+                                <div class="player-color-indicator"></div>
+                                <div class="player-details">
+                                    <span id="blackPlayerName" class="player-name">-</span>
+                                    <span id="blackPlayerElo" class="player-elo">-</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="game-meta">
-                            <div class="result">
-                                <span class="label">Result:</span>
-                                <span id="gameResult">-</span>
+
+                        <!-- Quick Info Pills -->
+                        <div class="quick-info-row">
+                            <div class="info-pill">
+                                <span class="pill-icon">📅</span>
+                                <span id="gameDate" class="pill-value">-</span>
                             </div>
-                            <div class="date">
-                                <span class="label">Date:</span>
-                                <span id="gameDate">-</span>
+                            <div class="info-pill">
+                                <span class="pill-icon">⏱️</span>
+                                <span id="gameTimeControl" class="pill-value">-</span>
                             </div>
-                            <div class="time-control">
-                                <span class="label">Time Control:</span>
-                                <span id="gameTimeControl">-</span>
-                            </div>
-                            <div class="speed">
-                                <span class="label">Speed:</span>
+                            <div class="info-pill speed-pill">
                                 <span id="gameSpeed" class="speed-badge">-</span>
                             </div>
-                            <div class="site">
-                                <span class="label">Site:</span>
-                                <span id="gameSite">-</span>
+                        </div>
+
+                        <!-- Details Grid -->
+                        <div class="details-grid">
+                            <div class="detail-item opening-detail">
+                                <span class="detail-label">Opening</span>
+                                <span id="gameOpening" class="detail-value truncate" title="">-</span>
                             </div>
-                            <div class="opening">
-                                <span class="label">Opening:</span>
-                                <span id="gameOpening">-</span>
+                            <div class="detail-item">
+                                <span class="detail-label">Termination</span>
+                                <span id="gameTermination" class="detail-value">-</span>
                             </div>
-                            <div class="termination">
-                                <span class="label">Termination:</span>
-                                <span id="gameTermination">-</span>
+                            <div class="detail-item site-detail">
+                                <span class="detail-label">Source</span>
+                                <div class="site-value-row">
+                                    <span id="gameSite" class="detail-value truncate">-</span>
+                                    <button id="copySiteBtn" class="copy-btn" title="Copy URL">📋</button>
+                                </div>
                             </div>
                         </div>
                     </div>

@@ -977,33 +977,275 @@ body {
     overflow-y: auto;
 }
 
+/* Game Info Panel - New Improved Layout */
+.game-info-panel {
+    margin-bottom: 20px;
+    padding: 0;
+}
+
+/* Players Section */
+.players-section {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 10px;
+}
+
+.player-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    min-width: 140px;
+}
+
+.player-card.white .player-color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: white;
+    border: 2px solid #333;
+    box-shadow: inset 0 0 0 1px #f8f9fa;
+}
+
+.player-card.black .player-color-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #333;
+    border: 2px solid #333;
+}
+
+.player-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.player-name {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: #333;
+}
+
+.player-elo {
+    font-size: 0.75em;
+    color: #888;
+}
+
+.vs-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.result-text {
+    font-weight: 700;
+    font-size: 1em;
+    color: #667eea;
+    background: white;
+    padding: 6px 12px;
+    border-radius: 16px;
+    box-shadow: 0 1px 4px rgba(102, 126, 234, 0.15);
+}
+
+/* Quick Info Pills */
+.quick-info-row {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.info-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: #f8f9fa;
+    border-radius: 20px;
+    border: 1px solid #e9ecef;
+}
+
+.pill-icon {
+    font-size: 14px;
+}
+
+.pill-value {
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #555;
+}
+
+.speed-pill {
+    padding: 0;
+    background: transparent;
+    border: none;
+}
+
+.speed-pill .speed-badge {
+    padding: 8px 14px;
+    font-size: 0.85em;
+}
+
+/* Details Grid */
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    padding: 16px;
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 12px;
+    background: white;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.detail-label {
+    font-size: 0.75em;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #888;
+}
+
+.detail-value {
+    font-size: 0.95em;
+    color: #333;
+    font-weight: 500;
+}
+
+/* Truncation with tooltip */
+.detail-value.truncate {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: help;
+}
+
+.opening-detail {
+    grid-column: span 2;
+}
+
+.opening-detail .detail-value.truncate {
+    max-width: 100%;
+}
+
+.site-detail {
+    overflow: hidden;
+}
+
+.site-detail .detail-value {
+    color: #667eea;
+}
+
+.site-value-row {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+}
+
+.site-value-row .detail-value {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.site-detail .detail-value a {
+    color: #667eea;
+    text-decoration: none;
+}
+
+.site-detail .detail-value a:hover {
+    text-decoration: underline;
+}
+
+/* Copy button */
+.copy-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    min-width: 24px;
+    padding: 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.copy-btn:hover {
+    background: #e9ecef;
+    border-color: #667eea;
+}
+
+.copy-btn:active {
+    transform: scale(0.95);
+}
+
+.copy-btn.copied {
+    background: #d4edda;
+    border-color: #28a745;
+}
+
+/* Responsive adjustments for game info */
+@media (max-width: 768px) {
+    .players-section {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .player-card {
+        min-width: auto;
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .opening-detail {
+        grid-column: span 1;
+    }
+    
+    .quick-info-row {
+        gap: 8px;
+    }
+}
+
+/* Legacy support - keep old selectors working */
 .game-info {
     margin-bottom: 20px;
     padding: 15px;
     background: #f8f9fa;
     border-radius: 8px;
-}
-
-.players {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 15px;
-}
-
-.white-player, .black-player {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.player-label {
-    font-weight: 600;
-    color: #666;
-}
-
-.elo {
-    color: #999;
-    font-size: 0.9em;
 }
 
 .game-meta {
@@ -1012,32 +1254,15 @@ body {
     gap: 10px;
 }
 
-.game-meta > div {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
 .label {
     font-weight: 600;
     color: #666;
     font-size: 0.9em;
 }
 
-#gameSite {
-    color: #667eea;
-    text-decoration: none;
-    word-break: break-all;
-}
-
-#gameSite:hover {
-    text-decoration: underline;
-}
-
 #gameSite a {
     color: #667eea;
     text-decoration: none;
-    word-break: break-all;
 }
 
 #gameSite a:hover {
